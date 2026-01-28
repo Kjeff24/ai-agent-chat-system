@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: ai-agent-chat-system
+  config:
+    import: optional:file:.env[.properties]
+  
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/ai_chat}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    # Optional: Uncomment to use H2 in-memory database for development
+    # url: jdbc:h2:mem:ai_chat
+    # driver-class-name: org.h2.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  
+  # Spring AI Configuration
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:gpt-4}
+          temperature: 0.7
+          max-tokens: 2000
+    
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          model: ${ANTHROPIC_MODEL:claude-3-opus-20240229}
+          temperature: 0.7
+          max-tokens: 2000
+    
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${OLLAMA_MODEL:llama2}
+
+server:
+  port: ${PORT:8080}
+
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-change-in-production}
+  expiration: ${JWT_EXPIRATION:604800000} # 7 days in milliseconds
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:2592000000} # 30 days
+
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
+
+# SpringDoc OpenAPI / Swagger
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+
+logging:
+  level:
+    com.aiagent: DEBUG
+    org.springframework.ai: DEBUG

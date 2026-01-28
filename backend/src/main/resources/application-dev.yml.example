@@ -1,0 +1,19 @@
+# Example development configuration
+# Copy this to application-dev.yml and update with your values
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ai_chat
+    username: postgres
+    password: postgres
+  
+  ai:
+    openai:
+      api-key: your-openai-api-key-here
+    anthropic:
+      api-key: your-anthropic-api-key-here
+    ollama:
+      base-url: http://localhost:11434
+
+jwt:
+  secret: your-secret-key-change-in-production-min-256-bits
