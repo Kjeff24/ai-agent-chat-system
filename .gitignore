@@ -1,0 +1,25 @@
+# Backend
+backend/target/
+backend/.classpath
+backend/.project
+backend/.settings/
+backend/.idea/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Environment (keep .env.example, ignore secrets)
+.env
+.env.local
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
