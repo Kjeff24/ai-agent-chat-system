@@ -1,0 +1,37 @@
+services:
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres-main
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ai_chat
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    volumes:
+      - redis_volume_data:/data
+    ports:
+      - "6379:6379"
+
+  redis_insight:
+    image: redis/redisinsight:latest
+    container_name: redis_insight
+    restart: always
+    ports:
+      - "5540:5540"
+    volumes:
+      - redis_insight_volume_data:/db
+    depends_on:
+      - redis
+
+volumes:
+  redis_volume_data:
+  redis_insight_volume_data:
