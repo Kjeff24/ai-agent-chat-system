@@ -23,3 +23,7 @@ frontend/.angular/
 # OS
 .DS_Store
 Thumbs.db
+
+postgres_data/
+redis_volume_data/
+redis_insight_volume_data/
