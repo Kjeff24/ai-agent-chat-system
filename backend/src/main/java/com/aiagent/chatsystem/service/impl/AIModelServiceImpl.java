@@ -75,7 +75,7 @@ public class AIModelServiceImpl implements AIModelService {
     }
     
     private ChatModel getChatModel(ModelConfig config) {
-        String provider = config.getProvider().name().toLowerCase();
+        String provider = resolveProviderKey(config);
         ChatModel model = modelRegistry.getModel(provider);
         
         if (model == null) {
@@ -88,7 +88,18 @@ public class AIModelServiceImpl implements AIModelService {
         
         return model;
     }
-    
+
+    /** Resolve registry key: use parameters.providerKey when provider is custom, else provider enum name. */
+    private String resolveProviderKey(ModelConfig config) {
+        if (config.getProvider() == ModelConfig.ModelProvider.custom
+                && config.getParameters() != null
+                && config.getParameters().get("providerKey") != null) {
+            String key = String.valueOf(config.getParameters().get("providerKey")).trim();
+            if (!key.isEmpty()) return key.toLowerCase();
+        }
+        return config.getProvider().name().toLowerCase();
+    }
+
     private Prompt getPromptWithOptions(List<Message> messages, ModelConfig config) {
         Map<String, Object> params = config.getParameters();
         Prompt prompt = new Prompt(messages);

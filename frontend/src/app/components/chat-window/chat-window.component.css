@@ -1,3 +1,76 @@
+/* Markdown-rendered message body: headings, lists, blockquotes, emphasis */
+.message-body :deep(p) {
+  margin: 0 0 0.75em;
+}
+.message-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+.message-body :deep(strong) {
+  font-weight: 600;
+}
+.message-body :deep(em) {
+  font-style: italic;
+}
+.message-body :deep(h1),
+.message-body :deep(h2),
+.message-body :deep(h3),
+.message-body :deep(h4) {
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+  line-height: 1.3;
+}
+.message-body :deep(h1) { font-size: 1.25em; }
+.message-body :deep(h2) { font-size: 1.15em; }
+.message-body :deep(h3) { font-size: 1.05em; }
+.message-body :deep(h4) { font-size: 1em; }
+.message-body :deep(ul),
+.message-body :deep(ol) {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+.message-body :deep(li) {
+  margin: 0.25em 0;
+}
+.message-body :deep(blockquote) {
+  margin: 0.75em 0;
+  padding-left: 1em;
+  border-left: 3px solid currentColor;
+  opacity: 0.9;
+}
+.message-body :deep(code) {
+  font-size: 0.9em;
+  padding: 0.15em 0.35em;
+  border-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.06);
+}
+.dark .message-body :deep(code) {
+  background: rgba(255, 255, 255, 0.1);
+}
+.message-body :deep(pre) {
+  margin: 0.75em 0;
+  padding: 0.75em 1em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  background: rgba(0, 0, 0, 0.05);
+}
+.dark .message-body :deep(pre) {
+  background: rgba(255, 255, 255, 0.08);
+}
+.message-body :deep(pre code) {
+  padding: 0;
+  background: none;
+}
+.message-body :deep(hr) {
+  border: none;
+  border-top: 1px solid currentColor;
+  opacity: 0.3;
+  margin: 1em 0;
+}
+.message-body :deep(a) {
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* Custom scrollbar styling */
 .messages-container::-webkit-scrollbar {
   width: 6px;
@@ -41,6 +114,26 @@
 textarea:focus {
   outline: none;
 }
+
+/* Thinking indicator: staggered bounce for dots */
+@keyframes thinkingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.thinking-dot {
+  animation: thinkingBounce 1.4s ease-in-out infinite;
+}
+
+.thinking-dot:nth-child(1) { animation-delay: 0ms; }
+.thinking-dot:nth-child(2) { animation-delay: 160ms; }
+.thinking-dot:nth-child(3) { animation-delay: 320ms; }
 
 /* Mobile optimizations */
 @media (max-width: 640px) {

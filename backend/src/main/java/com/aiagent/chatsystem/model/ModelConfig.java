@@ -1,5 +1,6 @@
 package com.aiagent.chatsystem.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -50,6 +51,7 @@ public class ModelConfig {
     private LocalDateTime updatedAt;
     
     @OneToMany(mappedBy = "modelConfig")
+    @JsonIgnore
     private List<Conversation> conversations;
     
     @PrePersist

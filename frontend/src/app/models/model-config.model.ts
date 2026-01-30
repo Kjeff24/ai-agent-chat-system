@@ -3,13 +3,24 @@ export interface ModelConfig {
   name: string;
   provider: 'openai' | 'anthropic' | 'ollama' | 'custom';
   model: string;
-  parameters: {
+  parameters?: {
     temperature?: number;
     maxTokens?: number;
     topP?: number;
     frequencyPenalty?: number;
     presencePenalty?: number;
+    providerKey?: string;
   };
   isDefault: boolean;
   isActive: boolean;
+}
+
+/** Request body for POST /api/models (create model config) */
+export interface CreateModelConfigRequest {
+  name: string;
+  provider: string;
+  model: string;
+  parameters?: Record<string, unknown>;
+  isDefault?: boolean;
+  isActive?: boolean;
 }

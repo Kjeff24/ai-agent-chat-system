@@ -2,6 +2,8 @@ import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angu
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../services/chat.service';
+import { ConfirmService } from '../../services/confirm.service';
+import { ToastService } from '../../services/toast.service';
 import { Conversation } from '../../models/conversation.model';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -23,7 +25,11 @@ export class ConversationListComponent implements OnInit, OnDestroy {
   editTitle = '';
   private destroy$ = new Subject<void>();
 
-  constructor(public chatService: ChatService) {}
+  constructor(
+    public chatService: ChatService,
+    private confirm: ConfirmService,
+    private toast: ToastService,
+  ) {}
 
   onToggle(): void {
     this.toggleSidebar.emit();
@@ -85,8 +91,14 @@ export class ConversationListComponent implements OnInit, OnDestroy {
 
   deleteConversation(conversation: Conversation, e: Event): void {
     e.stopPropagation();
-    if (!confirm('Delete this conversation?')) return;
-    this.chatService.deleteConversation(conversation.id);
+    this.confirm
+      .open({ message: 'Delete this conversation?', confirmLabel: 'Delete', danger: true })
+      .then((r) => {
+        if (r.confirmed) {
+          this.chatService.deleteConversation(conversation.id);
+          this.toast.success('Conversation deleted');
+        }
+      });
   }
 
   trackByConversationId(index: number, conversation: Conversation): string {

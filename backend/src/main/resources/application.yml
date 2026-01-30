@@ -27,7 +27,8 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
   
-  # Spring AI Configuration
+  # Spring AI Configuration (static providers at startup).
+  # Additional providers can be registered at runtime via POST /api/models/registry with optional models list and defaultModel.
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:}
@@ -62,6 +63,54 @@ jwt:
 cors:
   allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
 
+# MCP: add servers via Settings (MCP tab) or here. When at least one server is configured, MCP is enabled.
+# Each server can define its own default-context-tool(s) and query-transforms. When set, they override
+# the top-level fallbacks below. Tool results are combined and prepended as context for the model.
+#
+# Top-level fallback (used when a server does not define its own):
+#   default-context-tool: used when a server has no default-context-tool
+#   query-transforms: used when a server has no query-transforms
+mcp:
+  default-context-tool: ${MCP_DEFAULT_CONTEXT_TOOL:search_repositories}
+  query-transforms: {}
+
+  servers:
+    # -------------------------------------------------------------------------
+    # GitHub MCP (remote): repos, issues, PRs, code search. Requires GITHUB_PAT.
+    # -------------------------------------------------------------------------
+    github:
+      url: https://api.githubcopilot.com/mcp/
+      request-timeout-seconds: 30
+      headers:
+        Authorization: "Bearer ${GITHUB_PAT:}"
+      default-context-tool: search_repositories
+      query-transforms:
+        search_repositories:
+          - pattern: "(?:repos?(?:itories)?|repo)\\s+(?:from|for|in)\\s+([a-zA-Z0-9][a-zA-Z0-9_-]*)"
+            template: "user:$1"
+          - pattern: "(?:get|list|show|can you list)\\s+(?:repos?(?:itories)?|repo)\\s+(?:from|for|in)\\s+([a-zA-Z0-9][a-zA-Z0-9_-]*)"
+            template: "user:$1"
+
+    # -------------------------------------------------------------------------
+    # Example: second MCP server with its own tools and transforms
+    # -------------------------------------------------------------------------
+    # slack:
+    #   url: https://example.com/slack-mcp
+    #   request-timeout-seconds: 30
+    #   headers:
+    #     Authorization: "Bearer ${SLACK_TOKEN:}"
+    #   default-context-tool: list_channels
+    #   query-transforms: {}
+
+    # -------------------------------------------------------------------------
+    # Example: local or other Streamable HTTP MCP server (no context tools)
+    # -------------------------------------------------------------------------
+    # local:
+    #   url: http://localhost:8081/mcp
+    #   request-timeout-seconds: 30
+    #   # Omit default-context-tool to skip context injection for this server
+    #   # Omit query-transforms or leave {} to use raw user message as query
+
 # SpringDoc OpenAPI / Swagger
 springdoc:
   api-docs:
@@ -75,3 +124,5 @@ logging:
   level:
     com.aiagent: DEBUG
     org.springframework.ai: DEBUG
+    # MCP Java SDK: reduce noise from 405 when server only supports Streamable HTTP (POST), not GET/SSE
+    # io.modelcontextprotocol.client.LifecycleInitializer: ERROR

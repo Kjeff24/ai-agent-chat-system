@@ -41,6 +41,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(McpServerNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleMcpServerNotFound(McpServerNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ModelProviderNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleModelProviderNotFound(ModelProviderNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(InvalidModelConfigException.class)
     public ResponseEntity<Map<String, String>> handleInvalidModelConfig(InvalidModelConfigException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));

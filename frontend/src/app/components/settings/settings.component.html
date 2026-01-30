@@ -1,0 +1,403 @@
+@if (open) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+    (click)="close()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="settings-title"
+  >
+    <div
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+      (click)="stopPropagation($event)"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 id="settings-title" class="text-lg font-semibold text-gray-900 dark:text-white">Settings</h2>
+        <button
+          type="button"
+          (click)="close()"
+          class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          aria-label="Close"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6">
+        <button
+          type="button"
+          class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+          [class.border-primary-600]="activeTab() === 'providers'"
+          [class.text-primary-600]="activeTab() === 'providers'"
+          [class.border-transparent]="activeTab() !== 'providers'"
+          [class.text-gray-500]="activeTab() !== 'providers'"
+          [class.dark:text-gray-400]="activeTab() !== 'providers'"
+          (click)="setTab('providers')"
+        >
+          Model providers
+        </button>
+        <button
+          type="button"
+          class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+          [class.border-primary-600]="activeTab() === 'configs'"
+          [class.text-primary-600]="activeTab() === 'configs'"
+          [class.border-transparent]="activeTab() !== 'configs'"
+          [class.text-gray-500]="activeTab() !== 'configs'"
+          [class.dark:text-gray-400]="activeTab() !== 'configs'"
+          (click)="setTab('configs')"
+        >
+          Model configs
+        </button>
+        <button
+          type="button"
+          class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+          [class.border-primary-600]="activeTab() === 'mcp'"
+          [class.text-primary-600]="activeTab() === 'mcp'"
+          [class.border-transparent]="activeTab() !== 'mcp'"
+          [class.text-gray-500]="activeTab() !== 'mcp'"
+          [class.dark:text-gray-400]="activeTab() !== 'mcp'"
+          (click)="setTab('mcp')"
+        >
+          MCP servers
+        </button>
+      </div>
+
+      <!-- Messages -->
+      @if (error()) {
+        <div class="mx-4 mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm">
+          {{ error() }}
+        </div>
+      }
+      @if (success()) {
+        <div class="mx-4 mt-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-sm">
+          {{ success() }}
+        </div>
+      }
+
+      <!-- Content -->
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6">
+        @if (activeTab() === 'providers') {
+          <!-- Providers list -->
+          <div class="space-y-4">
+            @if (loading()) {
+              <p class="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+            } @else {
+              <div class="flex justify-end">
+                <button type="button" (click)="openAddProvider()" class="btn-primary text-sm py-2 px-4">
+                  Add provider
+                </button>
+              </div>
+              <ul class="space-y-2">
+                @for (p of providersWithMeta(); track p.name) {
+                  <li
+                    class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
+                  >
+                    <div class="flex flex-wrap items-center gap-2 min-w-0">
+                      <span class="font-medium text-gray-900 dark:text-white">{{ p.name }}</span>
+                      @if (p.dynamic) {
+                        <span class="text-xs px-2 py-0.5 rounded bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300">Dynamic</span>
+                      }
+                      @if (p.defaultModel) {
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Default: {{ p.defaultModel }}</span>
+                      }
+                    </div>
+                    @if (p.models && p.models.length) {
+                      <div class="flex flex-wrap gap-1">
+                        @for (m of p.models; track m) {
+                          <span class="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">{{ m }}</span>
+                        }
+                      </div>
+                    }
+                    @if (p.dynamic) {
+                      <div class="flex gap-2">
+                        <button
+                          type="button"
+                          (click)="openEditProvider(p.name)"
+                          class="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          (click)="unregisterProvider(p.name, $event)"
+                          class="text-xs text-red-600 dark:text-red-400 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    }
+                  </li>
+                }
+                @empty {
+                  <p class="text-sm text-gray-500 dark:text-gray-400">No providers registered. Add one to get started.</p>
+                }
+              </ul>
+              <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Only providers you add here (marked Dynamic) can be removed. Providers from config (e.g. OpenAI, Anthropic, Ollama) cannot be removed.</p>
+            }
+
+            <!-- Add / Edit provider form -->
+            @if (showAddProvider()) {
+              <div class="mt-6 p-4 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ editingProvider() ? 'Edit provider' : 'Register new provider' }}</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ editingProvider() ? 'Change API key, base URL, models, or default model. Provider name and type cannot be changed.' : 'Add a provider (e.g. OpenRouter, extra Ollama) then use it in Model configs. Type must be one of: openai, anthropic, ollama.' }}</p>
+                <div class="grid gap-3">
+                  <label class="block text-sm text-gray-700 dark:text-gray-300">Provider name</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="providerForm.provider"
+                    class="input-field"
+                    placeholder="e.g. openrouter, my-ollama"
+                    title="Unique key: letters, numbers, hyphens"
+                    [readonly]="!!editingProvider()"
+                  />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Unique key used in model configs. No spaces.{{ editingProvider() ? ' (Read-only when editing.)' : '' }}</p>
+                  <label class="block text-sm text-gray-700 dark:text-gray-300">Type</label>
+                  <select [(ngModel)]="providerForm.type" class="input-field" title="Accepted: openai, anthropic, ollama" [disabled]="!!editingProvider()">
+                    <option value="openai">OpenAI / OpenRouter (openai)</option>
+                    <option value="anthropic">Anthropic (anthropic)</option>
+                    <option value="ollama">Ollama (ollama)</option>
+                  </select>
+                  @if (providerForm.type === 'openai' || providerForm.type === 'anthropic') {
+                    <label class="block text-sm text-gray-700 dark:text-gray-300">API key @if (!editingProvider()) { <span class="text-red-500">*</span> }</label>
+                    <input
+                      type="password"
+                      [(ngModel)]="providerForm.apiKey"
+                      class="input-field"
+                      [placeholder]="editingProvider() ? 'Leave blank to keep current key' : 'sk-... (required for OpenAI/Anthropic)'"
+                    />
+                    @if (editingProvider()) {
+                      <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Leave blank to keep the current API key; enter a new value to change it.</p>
+                    }
+                  }
+                  <label class="block text-sm text-gray-700 dark:text-gray-300">Base URL (optional)</label>
+                  <input
+                    type="url"
+                    [(ngModel)]="providerForm.baseUrl"
+                    class="input-field"
+                    placeholder="e.g. https://api.openai.com or https://openrouter.ai/api"
+                  />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Leave blank for the default API URL. For OpenRouter use <code class="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-600">https://openrouter.ai/api</code> (this app adds /v1/chat/completions; see <a href="https://openrouter.ai/docs/quickstart" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">OpenRouter quickstart</a>).</p>
+                  <label class="block text-sm text-gray-700 dark:text-gray-300">Models (comma- or newline-separated)</label>
+                  <textarea
+                    [(ngModel)]="modelsInput"
+                    class="input-field min-h-[80px]"
+                    placeholder="e.g. gpt-4, gpt-3.5-turbo, gpt-4o"
+                    rows="3"
+                    title="One or more model IDs"
+                  ></textarea>
+                  @if (getModelsList().length) {
+                    <label class="block text-sm text-gray-700 dark:text-gray-300">Default model</label>
+                    <select [(ngModel)]="providerForm.defaultModel" class="input-field">
+                      <option value="">First in list</option>
+                      @for (m of getModelsList(); track m) {
+                        <option [value]="m">{{ m }}</option>
+                      }
+                    </select>
+                  }
+                </div>
+                <div class="flex gap-2 pt-2">
+                  <button type="button" (click)="submitAddProvider()" class="btn-primary text-sm">{{ editingProvider() ? 'Update' : 'Register' }}</button>
+                  <button type="button" (click)="cancelAddProvider()" class="btn-secondary text-sm">Cancel</button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (activeTab() === 'configs') {
+          <!-- Model configs list -->
+          <div class="space-y-4">
+            <p class="text-xs text-gray-500 dark:text-gray-400">Model configs define which provider and model to use for conversations. Choose a <strong>provider</strong> from the list (add one under Model providers if empty) and a <strong>model</strong> from that provider.</p>
+            <div class="flex justify-end">
+              <button type="button" (click)="openAddConfig()" class="btn-primary text-sm py-2 px-4">
+                Add model config
+              </button>
+            </div>
+            <ul class="space-y-2">
+              @for (c of configs(); track c.id) {
+                <li
+                  class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
+                >
+                  <div>
+                    <span class="font-medium text-gray-900 dark:text-white">{{ c.name }}</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">{{ getProviderDisplayName(c) }} / {{ c.model }}</span>
+                    @if (c.isDefault) {
+                      <span class="text-xs ml-2 px-2 py-0.5 rounded bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300">Default</span>
+                    }
+                  </div>
+                  <div class="flex gap-2">
+                    @if (!c.isDefault) {
+                      <button type="button" (click)="setDefaultConfig(c, $event)" class="text-xs text-primary-600 dark:text-primary-400 hover:underline">
+                        Set default
+                      </button>
+                    }
+                    <button type="button" (click)="deleteConfig(c, $event)" class="text-xs text-red-600 dark:text-red-400 hover:underline">
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              }
+              @empty {
+                <p class="text-sm text-gray-500 dark:text-gray-400">No model configs. Add one to choose provider and model for conversations.</p>
+              }
+            </ul>
+
+            <!-- Add config form -->
+            @if (showAddConfig()) {
+              <div class="mt-6 p-4 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">New model config</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Provider and model must come from your registered providers above. Accepted provider values: names from the list (e.g. openai, openrouter, ollama).</p>
+                <div class="grid gap-3">
+                  <label class="block text-sm text-gray-700 dark:text-gray-300">Name <span class="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    [(ngModel)]="configForm.name"
+                    class="input-field"
+                    placeholder="e.g. GPT-4 Chat, OpenRouter Claude"
+                    title="Display name for this config"
+                  />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Display name shown in the app.</p>
+                  <label class="block text-sm text-gray-700 dark:text-gray-300">Provider <span class="text-red-500">*</span></label>
+                  <select
+                    [(ngModel)]="configForm.provider"
+                    (ngModelChange)="onConfigProviderChange($event)"
+                    class="input-field"
+                    title="Choose a registered provider"
+                  >
+                    @if (providerNames().length === 0) {
+                      <option value="">— Add a provider in Model providers tab first —</option>
+                    }
+                    @for (name of providerNames(); track name) {
+                      <option [value]="name">{{ name }}</option>
+                    }
+                  </select>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Select from registered providers. Dynamic providers (e.g. openrouter) work as &quot;custom&quot; in the backend.</p>
+                  <label class="block text-sm text-gray-700 dark:text-gray-300">Model <span class="text-red-500">*</span></label>
+                  @if (availableModelsForConfig().length) {
+                    <select [(ngModel)]="configForm.model" class="input-field" title="Model ID from the selected provider">
+                      @for (m of availableModelsForConfig(); track m) {
+                        <option [value]="m">{{ m }}</option>
+                      }
+                    </select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Models for {{ configForm.provider || 'selected provider' }}.</p>
+                  } @else {
+                    <input
+                      type="text"
+                      [(ngModel)]="configForm.model"
+                      class="input-field"
+                      placeholder="e.g. gpt-4, claude-3-opus"
+                      title="Model ID from the provider"
+                    />
+                    <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Model ID supported by the selected provider.</p>
+                  }
+                  <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input type="checkbox" [(ngModel)]="configForm.isDefault" />
+                    Set as default config
+                  </label>
+                </div>
+                <div class="flex gap-2 pt-2">
+                  <button type="button" (click)="submitAddConfig()" class="btn-primary text-sm">Create</button>
+                  <button type="button" (click)="cancelAddConfig()" class="btn-secondary text-sm">Cancel</button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (activeTab() === 'mcp') {
+          <!-- MCP servers list -->
+          <div class="space-y-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              MCP (Model Context Protocol) servers provide tools and context. Use Streamable HTTP URLs. Only dynamically added servers can be removed.
+            </p>
+            <div class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-800 dark:text-amber-200">
+              <strong>To use MCP in chat:</strong> set the default context tool(s) in your backend config. Use only tool names your MCP server exposes (e.g. GitHub MCP: <code class="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40">search_repositories</code>, <code class="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40">search_code</code>, <code class="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40">search_issues</code>; <code class="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40">list_repositories</code> is not supported). In <code class="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40">.env</code>: <code class="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40">MCP_DEFAULT_CONTEXT_TOOL=search_repositories</code>. Each tool is called with your message as <code class="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40">query</code>; results are combined and injected as context. Restart the backend after changing.
+            </div>
+            <div class="flex justify-end">
+              <button type="button" (click)="openAddMcpServer()" class="btn-primary text-sm py-2 px-4">
+                Add MCP server
+              </button>
+            </div>
+            <ul class="space-y-2">
+              @for (s of mcpServers(); track s.name) {
+                <li
+                  class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
+                >
+                  <div class="min-w-0">
+                    <span class="font-medium text-gray-900 dark:text-white">{{ s.name }}</span>
+                    <span class="text-xs ml-2 px-2 py-0.5 rounded"
+                          [class.bg-primary-100]="s.source === 'dynamic'"
+                          [class.dark:bg-primary-900/40]="s.source === 'dynamic'"
+                          [class.text-primary-700]="s.source === 'dynamic'"
+                          [class.dark:text-primary-300]="s.source === 'dynamic'"
+                          [class.bg-gray-200]="s.source === 'static'"
+                          [class.dark:bg-gray-600]="s.source === 'static'"
+                          [class.text-gray-700]="s.source === 'static'"
+                          [class.dark:text-gray-300]="s.source === 'static'">
+                      {{ s.source }}
+                    </span>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5" [title]="s.url">{{ s.url }}</p>
+                  </div>
+                  @if (s.source === 'dynamic') {
+                    <button
+                      type="button"
+                      (click)="removeMcpServer(s, $event)"
+                      class="text-xs text-red-600 dark:text-red-400 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  }
+                </li>
+              }
+              @empty {
+                <p class="text-sm text-gray-500 dark:text-gray-400">No MCP servers configured. Add one or configure via backend.</p>
+              }
+            </ul>
+
+            <!-- Add MCP server form -->
+            @if (showAddMcpServer()) {
+              <div class="mt-6 p-4 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Register MCP server</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Use a Streamable HTTP URL. Name is a unique label.</p>
+                <div class="grid gap-3">
+                  <label class="block text-sm text-gray-700 dark:text-gray-300">Name <span class="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    [(ngModel)]="mcpForm.name"
+                    class="input-field"
+                    placeholder="e.g. github, filesystem"
+                    title="Unique label for this server"
+                  />
+                  <label class="block text-sm text-gray-700 dark:text-gray-300">URL (Streamable HTTP) <span class="text-red-500">*</span></label>
+                  <input
+                    type="url"
+                    [(ngModel)]="mcpForm.url"
+                    class="input-field"
+                    placeholder="https://your-mcp-server.example.com/sse"
+                    title="Streamable HTTP endpoint"
+                  />
+                  <label class="block text-sm text-gray-700 dark:text-gray-300">Request timeout (seconds)</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="mcpForm.requestTimeoutSeconds"
+                    class="input-field"
+                    min="1"
+                    placeholder="30"
+                    title="Timeout in seconds"
+                  />
+                </div>
+                <div class="flex gap-2 pt-2">
+                  <button type="button" (click)="submitAddMcpServer()" class="btn-primary text-sm">Register</button>
+                  <button type="button" (click)="cancelAddMcpServer()" class="btn-secondary text-sm">Cancel</button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

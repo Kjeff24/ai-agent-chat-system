@@ -21,7 +21,22 @@
     <properties>
         <java.version>21</java.version>
         <spring-ai.version>1.0.0-M4</spring-ai.version>
+        <!-- MCP Java SDK: https://mvnrepository.com/artifact/io.modelcontextprotocol.sdk -->
+        <mcp-sdk.version>0.17.2</mcp-sdk.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- MCP BOM for consistent SDK versions (mcp, mcp-json-jackson2, etc.) -->
+            <dependency>
+                <groupId>io.modelcontextprotocol.sdk</groupId>
+                <artifactId>mcp-bom</artifactId>
+                <version>${mcp-sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -100,6 +115,12 @@
             <scope>runtime</scope>
         </dependency>
         
+        <!-- MCP Java SDK: client with Streamable HTTP transport (io.modelcontextprotocol.sdk) -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp</artifactId>
+        </dependency>
+
         <!-- SpringDoc OpenAPI / Swagger -->
         <dependency>
             <groupId>org.springdoc</groupId>
