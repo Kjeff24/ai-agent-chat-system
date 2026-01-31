@@ -1,0 +1,124 @@
+<div
+  class="h-full flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors flex-shrink-0"
+  [class.w-16]="collapsed"
+  [class.w-72]="!collapsed"
+>
+  @if (collapsed) {
+    <!-- Collapsed: narrow icon bar (expand only; no add-conversation button) -->
+    <div class="h-full flex flex-col items-center py-3 gap-2 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-800">
+      <button
+        type="button"
+        (click)="onToggle()"
+        class="hidden lg:flex p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors items-center justify-center"
+        title="Open sidebar"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+        </svg>
+      </button>
+    </div>
+  } @else {
+  <!-- Expanded: full list -->
+  <!-- Header -->
+  <div class="flex flex-col gap-2 p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-800">
+    <div class="flex items-center justify-between">
+      <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Conversations</h2>
+      <button
+        type="button"
+        (click)="onToggle()"
+        class="hidden lg:flex p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors items-center justify-center"
+        title="Close sidebar"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+        </svg>
+      </button>
+    </div>
+    <button
+      (click)="createNewConversation()"
+      class="w-full btn-primary text-sm py-2 flex items-center justify-center gap-2 rounded-lg"
+      title="New Conversation"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+      </svg>
+      <span>New conversation</span>
+    </button>
+  </div>
+  
+  <!-- Conversations List -->
+  <div class="flex-1 overflow-y-auto">
+    <div *ngIf="conversations.length === 0" class="p-6 sm:p-8 text-center">
+      <div class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-300 dark:text-gray-600">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+        </svg>
+      </div>
+      <p class="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium">No conversations yet</p>
+      <p class="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-1">Create a new one to get started!</p>
+    </div>
+    
+    <div *ngFor="let conversation of conversations; trackBy: trackByConversationId" 
+         class="conversation-item group p-3 sm:p-4 border-b border-gray-100 dark:border-gray-700 cursor-pointer 
+                transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-700
+                animate-fade-in"
+         [class.bg-primary-50]="selectedConversationId === conversation.id"
+         [class.dark:bg-primary-900/30]="selectedConversationId === conversation.id"
+         [class.border-l-4]="selectedConversationId === conversation.id"
+         [class.border-l-primary-600]="selectedConversationId === conversation.id"
+         (click)="editingId !== conversation.id && selectConversation(conversation)">
+      <div class="flex items-start justify-between gap-1">
+        <div class="flex-1 min-w-0 pr-1">
+          <div class="flex items-center space-x-2 mb-1">
+            <svg class="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+            @if (editingId === conversation.id) {
+              <input
+                type="text"
+                [(ngModel)]="editTitle"
+                (blur)="saveRename()"
+                (keydown)="onRenameKeydown($event)"
+                class="conversation-rename-input input-field text-sm sm:text-base flex-1 min-w-0 py-1 px-2"
+                placeholder="Conversation name"
+                (click)="$event.stopPropagation()"
+              />
+            } @else {
+              <h3 class="text-sm sm:text-base font-medium text-gray-900 dark:text-gray-100 truncate">
+                {{ conversation.title || 'Untitled Conversation' }}
+              </h3>
+            }
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            {{ conversation.updatedAt | date:'MMM d, h:mm a' }}
+          </p>
+        </div>
+        @if (editingId !== conversation.id) {
+          <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              type="button"
+              (click)="startRename(conversation, $event)"
+              class="p-1.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              title="Rename"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+              </svg>
+            </button>
+            <button
+              type="button"
+              (click)="deleteConversation(conversation, $event)"
+              class="p-1.5 rounded text-gray-500 dark:text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              title="Delete"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+  }
+</div>

@@ -1,0 +1,21 @@
+/* Custom scrollbar for conversation list */
+.conversation-item:first-child {
+  border-top: none;
+}
+
+/* Smooth hover transitions */
+.conversation-item {
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+/* Active state styling */
+.conversation-item:active {
+  transform: scale(0.98);
+}
+
+/* Mobile touch optimizations */
+@media (max-width: 640px) {
+  .conversation-item {
+    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+  }
+}
