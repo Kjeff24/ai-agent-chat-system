@@ -1,0 +1,24 @@
+<div class="toast-container" role="region" aria-label="Notifications">
+  @for (t of toasts; track t.id) {
+    <div
+      class="toast toast-{{ t.type }}"
+      [attr.role]="'alert'"
+      (click)="dismiss(t.id)"
+    >
+      <svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="iconFor(t.type)"></path>
+      </svg>
+      <span class="toast-message">{{ t.message }}</span>
+      <button
+        type="button"
+        class="toast-close"
+        (click)="dismiss(t.id); $event.stopPropagation()"
+        aria-label="Dismiss"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+  }
+</div>
