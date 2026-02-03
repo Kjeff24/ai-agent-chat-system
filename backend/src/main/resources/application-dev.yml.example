@@ -6,7 +6,7 @@ spring:
     url: jdbc:postgresql://localhost:5432/ai_chat
     username: postgres
     password: postgres
-  
+
   ai:
     openai:
       api-key: your-openai-api-key-here
@@ -14,6 +14,28 @@ spring:
       api-key: your-anthropic-api-key-here
     ollama:
       base-url: http://localhost:11434
+
+  # MCP: each server can have its own default-context-tool and query-transforms.
+  # Top-level default-context-tool and query-transforms are fallbacks when a server omits them.
+  # mcp:
+  #   default-context-tool: search_repositories
+  #   query-transforms: {}
+  #   servers:
+  #     github:
+  #       url: https://api.githubcopilot.com/mcp/
+  #       request-timeout-seconds: 30
+  #       headers:
+  #         Authorization: "Bearer ${GITHUB_PAT:}"
+  #       default-context-tool: search_repositories
+  #       query-transforms:
+  #         search_repositories:
+  #           - pattern: "(?:repos?(?:itories)?|repo)\\s+(?:from|for|in)\\s+([a-zA-Z0-9][a-zA-Z0-9_-]*)"
+  #             template: "user:$1"
+  #     # Second server example:
+  #     # slack:
+  #     #   url: https://example.com/slack-mcp
+  #     #   default-context-tool: list_channels
+  #     #   query-transforms: {}
 
 jwt:
   secret: your-secret-key-change-in-production-min-256-bits
