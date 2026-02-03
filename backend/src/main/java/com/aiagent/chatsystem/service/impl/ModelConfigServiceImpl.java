@@ -9,6 +9,7 @@ import com.aiagent.chatsystem.service.AIModelService;
 import com.aiagent.chatsystem.service.ModelConfigService;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -100,11 +101,27 @@ public class ModelConfigServiceImpl implements ModelConfigService {
     private ModelConfig toModelConfig(CreateModelConfigRequest request) {
         ModelConfig config = new ModelConfig();
         config.setName(request.getName());
-        config.setProvider(ModelConfig.ModelProvider.valueOf(request.getProvider()));
+        String providerStr = request.getProvider() != null ? request.getProvider().trim().toLowerCase() : "";
+        ModelConfig.ModelProvider providerEnum = toProviderEnum(providerStr);
+        config.setProvider(providerEnum);
         config.setModel(request.getModel());
-        config.setParameters(request.getParameters());
+        Map<String, Object> params = request.getParameters() != null ? new HashMap<>(request.getParameters()) : new HashMap<>();
+        if (providerEnum == ModelConfig.ModelProvider.custom) {
+            params.put("providerKey", providerStr);
+        }
+        config.setParameters(params);
         config.setIsDefault(request.getIsDefault() != null ? request.getIsDefault() : false);
         config.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
         return config;
+    }
+
+    /** Map request provider string to enum; dynamic providers (e.g. openrouter) become custom. */
+    private static ModelConfig.ModelProvider toProviderEnum(String providerStr) {
+        if (providerStr == null || providerStr.isEmpty()) return ModelConfig.ModelProvider.custom;
+        try {
+            return ModelConfig.ModelProvider.valueOf(providerStr);
+        } catch (IllegalArgumentException e) {
+            return ModelConfig.ModelProvider.custom;
+        }
     }
 }
