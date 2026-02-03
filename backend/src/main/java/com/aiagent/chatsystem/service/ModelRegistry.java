@@ -87,4 +87,21 @@ public class ModelRegistry {
     public Set<String> getRegisteredProviders() {
         return models.keySet();
     }
+
+    /**
+     * First registered provider key, or null if none. Used as default for new conversations.
+     */
+    public String getDefaultProviderKey() {
+        return models.isEmpty() ? null : models.keySet().iterator().next();
+    }
+
+    /**
+     * Default model for a provider (from metadata), or null if unknown.
+     */
+    public String getDefaultModel(String providerKey) {
+        ProviderMetadata meta = getProviderMetadata(providerKey);
+        if (meta == null) return null;
+        if (meta.defaultModel() != null && !meta.defaultModel().isBlank()) return meta.defaultModel();
+        return meta.models().isEmpty() ? null : meta.models().get(0);
+    }
 }

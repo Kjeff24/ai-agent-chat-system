@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ChatWindowComponent } from './components/chat-window/chat-window.component';
 import { ConversationListComponent } from './components/conversation-list/conversation-list.component';
@@ -43,13 +44,27 @@ export class App implements OnInit, OnDestroy {
     private websocketService: WebSocketService,
     public authService: AuthService,
     public themeService: ThemeService,
-    private breakpoint: BreakpointObserver
+    private breakpoint: BreakpointObserver,
+    private router: Router
   ) {
     const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(SIDEBAR_KEY) : null;
     this.sidebarOpen = stored !== 'false';
   }
 
   ngOnInit(): void {
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const mcpOauth = params.get('mcp_oauth');
+    if (mcpOauth === 'success' || mcpOauth === 'failed') {
+      try {
+        sessionStorage.setItem('mcp_oauth_result', mcpOauth);
+      } catch (_) {}
+      this.router.navigate([], { queryParams: {}, queryParamsHandling: '', replaceUrl: true }).then(() => {
+        if (mcpOauth === 'success') {
+          this.showSettings = true;
+        }
+      });
+    }
+
     this.authService.isLoggedIn$
       .pipe(takeUntil(this.destroy$))
       .subscribe((loggedIn) => {

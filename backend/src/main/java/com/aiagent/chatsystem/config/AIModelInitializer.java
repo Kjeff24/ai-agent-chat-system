@@ -61,7 +61,7 @@ public class AIModelInitializer {
                     List<String> models = p.getModels() != null && !p.getModels().isEmpty()
                             ? p.getModels()
                             : (p.getDefaultModel() != null ? List.of(p.getDefaultModel()) : List.of());
-                    ProviderMetadata metadata = ProviderMetadata.of(models, p.getDefaultModel());
+                    ProviderMetadata metadata = ProviderMetadata.of(models, p.getDefaultModel(), p.getType());
                     modelRegistry.registerDynamicModel(p.getProviderKey(), chatModel, metadata);
                     System.out.println("✓ Dynamic provider restored: " + p.getProviderKey());
                 } catch (Exception e) {

@@ -7,6 +7,7 @@ import java.util.Map;
 
 /**
  * Request body for dynamically registering an MCP server (Streamable HTTP).
+ * Tools are discovered from the server at runtime; only name, url, and optional headers/timeout are required.
  */
 public class RegisterMcpServerRequest {
 
@@ -20,6 +21,9 @@ public class RegisterMcpServerRequest {
     private int requestTimeoutSeconds = 30;
 
     private Map<String, String> headers;
+
+    /** Optional OAuth provider id (e.g. "atlassian"). When set, auth uses per-user OAuth instead of static headers. */
+    private String oauthProvider;
 
     public String getName() {
         return name;
@@ -51,5 +55,13 @@ public class RegisterMcpServerRequest {
 
     public void setHeaders(Map<String, String> headers) {
         this.headers = headers;
+    }
+
+    public String getOauthProvider() {
+        return oauthProvider;
+    }
+
+    public void setOauthProvider(String oauthProvider) {
+        this.oauthProvider = oauthProvider;
     }
 }

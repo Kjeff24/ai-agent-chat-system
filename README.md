@@ -19,9 +19,10 @@ A scalable, extensible chat system with configurable AI models, real-time commun
 - **RxJS** for reactive programming
 - **Angular Material** for UI components
 
-## Architecture
+## Documentation
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation.
+- **[USAGE.md](USAGE.md)** — How to use the application: sign in, chat, add model providers, model configs, and MCP servers (UI and API).
+- **Architecture** — See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation (if present).
 
 ## Prerequisites
 

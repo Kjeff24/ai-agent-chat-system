@@ -1,0 +1,117 @@
+<div class="space-y-4">
+  @if (loading) {
+    <p class="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+  } @else {
+    <div class="flex justify-end">
+      <button type="button" (click)="openAddProvider()" class="btn-primary text-sm py-2 px-4">
+        Add provider
+      </button>
+    </div>
+    <ul class="space-y-2">
+      @for (p of providersWithMeta(); track p.name) {
+        <li
+          class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
+        >
+          <div class="flex flex-wrap items-center gap-2 min-w-0">
+            <span class="font-medium text-gray-900 dark:text-white">{{ p.name }}</span>
+            @if (p.dynamic) {
+              <span class="text-xs px-2 py-0.5 rounded bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300">Dynamic</span>
+            }
+            @if (p.defaultModel) {
+              <span class="text-xs text-gray-500 dark:text-gray-400">Default: {{ p.defaultModel }}</span>
+            }
+          </div>
+          @if (p.models && p.models.length) {
+            <div class="flex flex-wrap items-center gap-1">
+              @for (m of p.models.slice(0, 3); track m) {
+                <span class="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">{{ m }}</span>
+              }
+              @if (p.models.length > 3) {
+                <span class="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-600/70 text-gray-600 dark:text-gray-400">+{{ p.models.length - 3 }} more</span>
+              }
+            </div>
+          }
+          @if (p.dynamic) {
+            <div class="flex gap-2">
+              <button type="button" (click)="openEditProvider(p.name)" class="text-xs text-primary-600 dark:text-primary-400 hover:underline">Edit</button>
+              <button type="button" (click)="unregisterProvider(p.name, $event)" class="text-xs text-red-600 dark:text-red-400 hover:underline">Remove</button>
+            </div>
+          }
+        </li>
+      }
+      @empty {
+        <p class="text-sm text-gray-500 dark:text-gray-400">No providers registered. Add one to get started.</p>
+      }
+    </ul>
+    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Only providers you add here (marked Dynamic) can be removed. Providers from config (e.g. OpenAI, Anthropic, Ollama) cannot be removed.</p>
+  }
+
+  @if (showAddProvider()) {
+    <div class="mt-6 p-4 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ editingProvider() ? 'Edit provider' : 'Register new provider' }}</h3>
+        @if (!editingProvider()) {
+          <div class="flex items-center gap-2">
+            <input #providerFileInput type="file" accept=".json,application/json" (change)="onImportProviderJson($event)" class="hidden" />
+            <button type="button" (click)="providerFileInput.click()" class="btn-secondary text-sm py-1.5 px-3">Import JSON</button>
+          </div>
+        }
+      </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400">{{ editingProvider() ? 'Change API key, base URL, models, or default model. Provider name and type cannot be changed.' : 'Add a provider (e.g. OpenRouter, Ollama, AWS Bedrock) then use it in Model configs. Type: openai, anthropic, ollama, or bedrock. Or upload a JSON file with provider, type, and optional apiKey, secretKey (bedrock), baseUrl/region, models, defaultModel.' }}</p>
+      <div class="grid gap-3">
+        <label class="block text-sm text-gray-700 dark:text-gray-300">Provider name</label>
+        <input type="text" [(ngModel)]="providerForm.provider" class="input-field" placeholder="e.g. openrouter, my-ollama, bedrock" title="Unique key: letters, numbers, hyphens" [readonly]="!!editingProvider()" />
+        <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Unique key used in model configs. No spaces.{{ editingProvider() ? ' (Read-only when editing.)' : '' }}</p>
+        <label class="block text-sm text-gray-700 dark:text-gray-300">Type</label>
+        <select [(ngModel)]="providerForm.type" class="input-field" title="Accepted: openai, anthropic, ollama, bedrock" [disabled]="!!editingProvider()">
+          <option value="openai">OpenAI / OpenRouter (openai)</option>
+          <option value="anthropic">Anthropic (anthropic)</option>
+          <option value="ollama">Ollama (ollama)</option>
+          <option value="bedrock">AWS Bedrock (bedrock)</option>
+        </select>
+        @if (providerForm.type === 'openai' || providerForm.type === 'anthropic') {
+          <label class="block text-sm text-gray-700 dark:text-gray-300">API key @if (!editingProvider()) { <span class="text-red-500">*</span> }</label>
+          <input type="password" [(ngModel)]="providerForm.apiKey" class="input-field" [placeholder]="editingProvider() ? 'Leave blank to keep current key' : 'sk-... (required for OpenAI/Anthropic)'" />
+          @if (editingProvider()) {
+            <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Leave blank to keep the current API key; enter a new value to change it.</p>
+          }
+        }
+        @if (providerForm.type === 'bedrock') {
+          <label class="block text-sm text-gray-700 dark:text-gray-300">AWS region</label>
+          <input type="text" [(ngModel)]="providerForm.baseUrl" class="input-field" placeholder="e.g. us-east-1" />
+          <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">AWS region where Bedrock is available. Leave blank for us-east-1.</p>
+          <label class="block text-sm text-gray-700 dark:text-gray-300">AWS access key (optional)</label>
+          <input type="password" [(ngModel)]="providerForm.apiKey" class="input-field" [placeholder]="editingProvider() ? 'Leave blank to keep current' : 'Or use AWS_ACCESS_KEY_ID env'" />
+          <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Leave blank to use default credential chain (env vars, ~/.aws/credentials).</p>
+          <label class="block text-sm text-gray-700 dark:text-gray-300">AWS secret key (optional)</label>
+          <input type="password" [(ngModel)]="providerForm.secretKey" class="input-field" [placeholder]="editingProvider() ? 'Leave blank to keep current' : 'Or use AWS_SECRET_ACCESS_KEY env'" />
+          <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Required if you set access key above.</p>
+        }
+        @if (providerForm.type !== 'bedrock') {
+          <label class="block text-sm text-gray-700 dark:text-gray-300">Base URL (optional)</label>
+          <input type="url" [(ngModel)]="providerForm.baseUrl" class="input-field" placeholder="e.g. https://api.openai.com or https://openrouter.ai/api" />
+          <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Leave blank for the default API URL. For OpenRouter use <code class="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-600">https://openrouter.ai/api</code>.</p>
+        }
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <label class="block text-sm text-gray-700 dark:text-gray-300">Models (comma- or newline-separated)</label>
+          <button type="button" (click)="discoverModels()" class="btn-secondary text-sm py-1.5 px-3">Discover models</button>
+        </div>
+        <textarea [(ngModel)]="modelsInput" class="input-field min-h-[80px]" [placeholder]="providerForm.type === 'bedrock' ? 'e.g. anthropic.claude-3-5-sonnet-20240620-v1:0' : 'e.g. gpt-4, gpt-3.5-turbo, gpt-4o'" rows="3" title="One or more model IDs"></textarea>
+        <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Use “Discover models” to fetch available model IDs from the provider (OpenAI/Ollama need base URL and API key for OpenAI).</p>
+        @if (getModelsList().length) {
+          <label class="block text-sm text-gray-700 dark:text-gray-300">Default model</label>
+          <select [(ngModel)]="providerForm.defaultModel" class="input-field">
+            <option value="">First in list</option>
+            @for (m of getModelsList(); track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
+        }
+      </div>
+      <div class="flex flex-wrap gap-2 pt-2">
+        <button type="button" (click)="submitAddProvider()" class="btn-primary text-sm">{{ editingProvider() ? 'Update' : 'Register' }}</button>
+        <button type="button" (click)="cancelAddProvider()" class="btn-secondary text-sm">Cancel</button>
+      </div>
+    </div>
+  }
+</div>
