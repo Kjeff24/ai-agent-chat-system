@@ -13,10 +13,13 @@ export class ChatService {
   private currentConversationSubject = new BehaviorSubject<Conversation | null>(null);
   private messagesSubject = new BehaviorSubject<Message[]>([]);
   private conversationsSubject = new BehaviorSubject<Conversation[]>([]);
+  private waitingForReplySubject = new BehaviorSubject<boolean>(false);
 
   public currentConversation$ = this.currentConversationSubject.asObservable();
   public messages$ = this.messagesSubject.asObservable();
   public conversations$ = this.conversationsSubject.asObservable();
+  /** True while a sent message is pending and we're waiting for the AI reply. */
+  public waitingForReply$ = this.waitingForReplySubject.asObservable();
 
   constructor(
     private apiService: ApiService,
@@ -157,8 +160,10 @@ export class ChatService {
       }
     }
 
+    this.waitingForReplySubject.next(true);
     this.apiService.sendMessage(conversationId, content).subscribe({
       next: (assistantMsg) => {
+        this.waitingForReplySubject.next(false);
         const messages = this.messagesSubject.value;
         const normalized: Message = {
           id: String(assistantMsg.id),
@@ -173,6 +178,7 @@ export class ChatService {
         }
       },
       error: (error) => {
+        this.waitingForReplySubject.next(false);
         console.error('Error sending message:', error);
         const messages = this.messagesSubject.value.filter(m => m.id !== userMessage.id);
         this.messagesSubject.next(messages);
