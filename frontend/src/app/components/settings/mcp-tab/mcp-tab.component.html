@@ -1,87 +1,13 @@
-<div class="space-y-6">
-  <!-- OAuth providers -->
-  <section>
-    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">OAuth providers</h3>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-      Add OAuth providers so MCP servers can use them (e.g. Atlassian, Google). Set the same id in the MCP server’s “OAuth provider” field. Only dynamically added providers can be edited or removed.
-    </p>
-    <div class="flex justify-end mb-2">
-      <button type="button" (click)="openAddOAuthProvider()" class="btn-primary text-sm py-2 px-4">
-        Add OAuth provider
-      </button>
-    </div>
-    <ul class="space-y-2">
-      @for (p of oauthProviders(); track p.id) {
-        <li class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
-          <div class="min-w-0">
-            <span class="font-medium text-gray-900 dark:text-white">{{ p.id }}</span>
-            <span class="text-xs ml-2 px-2 py-0.5 rounded"
-                  [class.bg-primary-100]="p.source === 'dynamic'"
-                  [class.dark:bg-primary-900/40]="p.source === 'dynamic'"
-                  [class.text-primary-700]="p.source === 'dynamic'"
-                  [class.dark:text-primary-300]="p.source === 'dynamic'"
-                  [class.bg-gray-200]="p.source === 'static'"
-                  [class.dark:bg-gray-600]="p.source === 'static'"
-                  [class.text-gray-700]="p.source === 'static'"
-                  [class.dark:text-gray-300]="p.source === 'static'">
-              {{ p.source }}
-            </span>
-            <p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5" [title]="p.authorizationUri">{{ p.authorizationUri }}</p>
-            @if (p.clientIdMasked) {
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Client ID: {{ p.clientIdMasked }}</p>
-            }
-          </div>
-          @if (p.source === 'dynamic') {
-            <div class="flex items-center gap-2">
-              <button type="button" (click)="openEditOAuthProvider(p)" class="text-xs text-primary-600 dark:text-primary-400 hover:underline">Edit</button>
-              <button type="button" (click)="removeOAuthProvider(p, $event)" class="text-xs text-red-600 dark:text-red-400 hover:underline">Remove</button>
-            </div>
-          }
-        </li>
-      }
-      @empty {
-        <p class="text-sm text-gray-500 dark:text-gray-400">No OAuth providers. Add one so MCP servers can use OAuth (e.g. atlassian).</p>
-      }
-    </ul>
-
-    @if (showAddOAuthProvider()) {
-      <div class="mt-4 p-4 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
-        <h4 class="text-sm font-semibold text-gray-900 dark:text-white">{{ editingOAuthProvider() ? 'Edit OAuth provider' : 'Add OAuth provider' }}</h4>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Use the same id in MCP server “OAuth provider” (e.g. atlassian). Get client id/secret from the provider’s developer console.</p>
-        <div class="grid gap-3">
-          <label class="block text-sm text-gray-700 dark:text-gray-300">Provider id <span class="text-red-500">*</span></label>
-          <input type="text" [(ngModel)]="oauthForm.id" class="input-field" placeholder="e.g. atlassian, google" [readonly]="!!editingOAuthProvider()" />
-          <label class="block text-sm text-gray-700 dark:text-gray-300">Authorization URI <span class="text-red-500">*</span></label>
-          <input type="url" [(ngModel)]="oauthForm.authorizationUri" class="input-field" placeholder="https://auth.example.com/authorize" />
-          <label class="block text-sm text-gray-700 dark:text-gray-300">Token URI <span class="text-red-500">*</span></label>
-          <input type="url" [(ngModel)]="oauthForm.tokenUri" class="input-field" placeholder="https://auth.example.com/oauth/token" />
-          <label class="block text-sm text-gray-700 dark:text-gray-300">Client ID</label>
-          <input type="text" [(ngModel)]="oauthForm.clientId" class="input-field" placeholder="Your client id" />
-          <label class="block text-sm text-gray-700 dark:text-gray-300">Client secret</label>
-          <input type="password" [(ngModel)]="oauthForm.clientSecret" class="input-field" placeholder="Your client secret" autocomplete="off" />
-          <label class="block text-sm text-gray-700 dark:text-gray-300">Scopes (space-separated)</label>
-          <input type="text" [(ngModel)]="oauthForm.scopes" class="input-field" placeholder="openid email profile" />
-        </div>
-        <div class="flex gap-2 pt-2">
-          <button type="button" (click)="submitAddOAuthProvider()" class="btn-primary text-sm">{{ editingOAuthProvider() ? 'Update' : 'Add' }}</button>
-          <button type="button" (click)="cancelAddOAuthProvider()" class="btn-secondary text-sm">Cancel</button>
-        </div>
-      </div>
-    }
-  </section>
-
-  <!-- MCP servers -->
-  <section>
-    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">MCP servers</h3>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-      MCP (Model Context Protocol) servers provide tools the model can call. Use Streamable HTTP URLs. Tools are discovered from each server at runtime. Only dynamically added servers can be removed.
-    </p>
-    <div class="flex justify-end mb-2">
-      <button type="button" (click)="openAddMcpServer()" class="btn-primary text-sm py-2 px-4">
-        Add MCP server
-      </button>
-    </div>
-    <ul class="space-y-2">
+<div class="space-y-4">
+  <p class="text-sm text-gray-500 dark:text-gray-400">
+    MCP (Model Context Protocol) servers provide tools the model can call. Use Streamable HTTP URLs. Configure OAuth providers in the OAuth providers tab, then select one when adding a server if it requires user-based auth. Only dynamically added servers can be removed.
+  </p>
+  <div class="flex justify-end mb-2">
+    <button type="button" (click)="openAddMcpServer()" class="btn-primary text-sm py-2 px-4">
+      Add MCP server
+    </button>
+  </div>
+  <ul class="space-y-2">
     @for (s of mcpServers; track s.name) {
       <li class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
         <div class="min-w-0">
@@ -139,42 +65,79 @@
       <p class="text-sm text-gray-500 dark:text-gray-400">No MCP servers configured. Add one or configure via backend.</p>
     }
     </ul>
-
     @if (showAddMcpServer()) {
-    <div class="mt-6 p-4 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ editingMcpServer() ? 'Edit MCP server' : 'Register MCP server' }}</h3>
-        @if (!editingMcpServer()) {
-          <div class="flex items-center gap-2">
-            <input #mcpFileInput type="file" accept=".json,application/json" (change)="onImportMcpJson($event)" class="hidden" />
-            <button type="button" (click)="mcpFileInput.click()" class="btn-secondary text-sm py-1.5 px-3">Import JSON</button>
+      <div
+        class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        (click)="cancelAddMcpServer()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mcp-form-title"
+      >
+        <div
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 id="mcp-form-title" class="text-lg font-semibold text-gray-900 dark:text-white">{{ editingMcpServer() ? 'Edit MCP server' : 'Register MCP server' }}</h2>
+            @if (!editingMcpServer()) {
+              <div class="flex items-center gap-2">
+                <input #mcpFileInput type="file" accept=".json,application/json" (change)="onImportMcpJson($event)" class="hidden" />
+                <button type="button" (click)="mcpFileInput.click()" class="btn-secondary text-sm py-1.5 px-3">Import JSON</button>
+                <button
+                  type="button"
+                  (click)="cancelAddMcpServer()"
+                  class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  aria-label="Close"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              </div>
+            } @else {
+              <button
+                type="button"
+                (click)="cancelAddMcpServer()"
+                class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                aria-label="Close"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            }
           </div>
-        }
+          <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
+            <p class="text-xs text-gray-500 dark:text-gray-400">Use a Streamable HTTP URL. Name is a unique label. Tools are discovered from the server at runtime. Or upload a JSON file with name, url, and optional requestTimeoutSeconds, headers.</p>
+            <div class="grid gap-3">
+              <label class="block text-sm text-gray-700 dark:text-gray-300">Name <span class="text-red-500">*</span></label>
+              <input type="text" [(ngModel)]="mcpForm.name" class="input-field" placeholder="e.g. github, filesystem" title="Unique label for this server" [readonly]="!!editingMcpServer()" />
+              <label class="block text-sm text-gray-700 dark:text-gray-300">URL (Streamable HTTP) <span class="text-red-500">*</span></label>
+              <input type="url" [(ngModel)]="mcpForm.url" class="input-field" placeholder="https://your-mcp-server.example.com/sse" title="Streamable HTTP endpoint" />
+              <label class="block text-sm text-gray-700 dark:text-gray-300">Request timeout (seconds)</label>
+              <input type="number" [(ngModel)]="mcpForm.requestTimeoutSeconds" class="input-field" min="1" placeholder="30" title="Timeout in seconds" />
+              <label class="block text-sm text-gray-700 dark:text-gray-300">OAuth provider (optional)</label>
+              <select [(ngModel)]="mcpForm.oauthProvider" class="input-field" title="When set, users authorize via OAuth instead of static token">
+                <option [ngValue]="undefined">None</option>
+                @for (p of oauthProviders(); track p.id) {
+                  <option [ngValue]="p.id">{{ p.id }}</option>
+                }
+              </select>
+              <label class="block text-sm text-gray-700 dark:text-gray-300">Bearer token (optional)</label>
+              <div class="relative">
+                <input [type]="showBearerToken() ? 'text' : 'password'" [(ngModel)]="mcpForm.bearerToken" class="input-field pr-10" placeholder="e.g. GitHub PAT, Slack token" title="Sent as Authorization: Bearer &lt;token&gt;. Leave empty if using OAuth." autocomplete="off" />
+                <button type="button" (click)="showBearerToken.set(!showBearerToken())" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" [attr.aria-label]="showBearerToken() ? 'Hide' : 'Show'" title="{{ showBearerToken() ? 'Hide' : 'Show' }}">
+                  @if (showBearerToken()) {
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  }
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Use OAuth provider above for user-based auth, or a Bearer token for static API keys. Some MCP servers require one or the other.</p>
+            </div>
+          </div>
+          <div class="flex gap-2 px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+            <button type="button" (click)="submitAddMcpServer()" class="btn-primary text-sm">{{ editingMcpServer() ? 'Update' : 'Register' }}</button>
+            <button type="button" (click)="cancelAddMcpServer()" class="btn-secondary text-sm">Cancel</button>
+          </div>
+        </div>
       </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400">Use a Streamable HTTP URL. Name is a unique label. Tools are discovered from the server at runtime. Or upload a JSON file with name, url, and optional requestTimeoutSeconds, headers.</p>
-      <div class="grid gap-3">
-        <label class="block text-sm text-gray-700 dark:text-gray-300">Name <span class="text-red-500">*</span></label>
-        <input type="text" [(ngModel)]="mcpForm.name" class="input-field" placeholder="e.g. github, filesystem" title="Unique label for this server" [readonly]="!!editingMcpServer()" />
-        <label class="block text-sm text-gray-700 dark:text-gray-300">URL (Streamable HTTP) <span class="text-red-500">*</span></label>
-        <input type="url" [(ngModel)]="mcpForm.url" class="input-field" placeholder="https://your-mcp-server.example.com/sse" title="Streamable HTTP endpoint" />
-        <label class="block text-sm text-gray-700 dark:text-gray-300">Request timeout (seconds)</label>
-        <input type="number" [(ngModel)]="mcpForm.requestTimeoutSeconds" class="input-field" min="1" placeholder="30" title="Timeout in seconds" />
-        <label class="block text-sm text-gray-700 dark:text-gray-300">OAuth provider (optional)</label>
-        <select [(ngModel)]="mcpForm.oauthProvider" class="input-field" title="When set, users authorize via OAuth instead of static token">
-          <option [ngValue]="undefined">None</option>
-          @for (p of oauthProviders(); track p.id) {
-            <option [ngValue]="p.id">{{ p.id }}</option>
-          }
-        </select>
-        <label class="block text-sm text-gray-700 dark:text-gray-300">Bearer token (optional)</label>
-        <input type="password" [(ngModel)]="mcpForm.bearerToken" class="input-field" placeholder="e.g. GitHub PAT, Slack token" title="Sent as Authorization: Bearer &lt;token&gt;. Leave empty if using OAuth." autocomplete="off" />
-        <p class="text-xs text-gray-500 dark:text-gray-400">Use OAuth provider above for user-based auth, or a Bearer token for static API keys. Some MCP servers require one or the other.</p>
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button type="button" (click)="submitAddMcpServer()" class="btn-primary text-sm">{{ editingMcpServer() ? 'Update' : 'Register' }}</button>
-        <button type="button" (click)="cancelAddMcpServer()" class="btn-secondary text-sm">Cancel</button>
-      </div>
-    </div>
     }
-  </section>
 </div>

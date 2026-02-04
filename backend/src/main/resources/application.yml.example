@@ -100,15 +100,15 @@ app:
 # Add servers via Settings (MCP tab) or here. Create/update via POST/PUT /api/mcp/servers (name, url, optional headers/timeout, optional oauthProvider).
 # Static servers can set oauth-provider (e.g. atlassian) to use OAuth; dynamic servers can send oauthProvider in the API body.
 mcp:
-  servers: {}
+  servers:
     # -------------------------------------------------------------------------
     # GitHub MCP (remote): repos, issues, PRs, code search. Requires GITHUB_PAT.
     # -------------------------------------------------------------------------
-    # github:
-    #   url: https://api.githubcopilot.com/mcp/
-    #   request-timeout-seconds: 30
-    #   headers:
-    #     Authorization: "Bearer ${GITHUB_PAT}"
+    github:
+      url: https://api.githubcopilot.com/mcp/
+      request-timeout-seconds: 30
+      headers:
+        Authorization: "Bearer ${GITHUB_PAT}"
 
     # -------------------------------------------------------------------------
     # Atlassian Rovo MCP: OAuth from https://mcp.atlassian.com/.well-known/oauth-authorization-server.

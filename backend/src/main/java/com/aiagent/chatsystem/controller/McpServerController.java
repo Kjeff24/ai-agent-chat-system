@@ -128,7 +128,7 @@ public class McpServerController {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Accept", "application/json, text/event-stream");
         headers.setBearerAuth(token);
-        String body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}";
+        String body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"ai-agent-chat-system\",\"version\":\"1.0\"}}}";
         RestTemplate rest = new RestTemplate();
         try {
             ResponseEntity<String> response = rest.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);

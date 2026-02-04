@@ -16,14 +16,15 @@ import { RegistryResponse } from '../../models/registry.model';
 import { McpServerSummary } from '../../models/mcp.model';
 import { OAuthProviderSummary } from '../../models/oauth-provider.model';
 import { ProvidersTabComponent } from './providers-tab/providers-tab.component';
+import { OauthTabComponent } from './oauth-tab/oauth-tab.component';
 import { McpTabComponent } from './mcp-tab/mcp-tab.component';
 
-export type SettingsTab = 'providers' | 'mcp';
+export type SettingsTab = 'providers' | 'oauth' | 'mcp';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, ProvidersTabComponent, McpTabComponent],
+  imports: [CommonModule, ProvidersTabComponent, OauthTabComponent, McpTabComponent],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css'],
 })
@@ -55,6 +56,11 @@ export class SettingsComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   load(): void {
+    this.loadWithOptions(true);
+  }
+
+  /** Full load when opening settings: OAuth result, loading overlay, registry, MCP, OAuth providers. */
+  private loadWithOptions(showLoading: boolean): void {
     const oauthResult = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('mcp_oauth_result') : null;
     if (oauthResult) {
       try {
@@ -68,8 +74,10 @@ export class SettingsComponent implements OnInit, OnChanges, OnDestroy {
       }
     }
 
-    this.loading.set(true);
-    this.error.set(null);
+    if (showLoading) {
+      this.loading.set(true);
+      this.error.set(null);
+    }
     this.api
       .getRegistry()
       .pipe(takeUntil(this.destroy$))
@@ -119,8 +127,9 @@ export class SettingsComponent implements OnInit, OnChanges, OnDestroy {
     e.stopPropagation();
   }
 
+  /** Called when a tab reports a change (e.g. provider added). Reload data without hiding the list. */
   onRefresh(): void {
-    this.load();
+    this.loadWithOptions(false);
   }
 
   onError(message: string | null): void {

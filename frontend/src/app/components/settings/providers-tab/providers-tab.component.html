@@ -10,7 +10,7 @@
     <ul class="space-y-2">
       @for (p of providersWithMeta(); track p.name) {
         <li
-          class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
+          class="flex flex-col gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
         >
           <div class="flex flex-wrap items-center gap-2 min-w-0">
             <span class="font-medium text-gray-900 dark:text-white">{{ p.name }}</span>
@@ -20,17 +20,17 @@
             @if (p.defaultModel) {
               <span class="text-xs text-gray-500 dark:text-gray-400">Default: {{ p.defaultModel }}</span>
             }
+            @if (p.models && p.models.length) {
+              <div class="flex flex-wrap items-center gap-1">
+                @for (m of p.models.slice(0, 3); track m) {
+                  <span class="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">{{ m }}</span>
+                }
+                @if (p.models.length > 3) {
+                  <span class="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-600/70 text-gray-600 dark:text-gray-400">+{{ p.models.length - 3 }} more</span>
+                }
+              </div>
+            }
           </div>
-          @if (p.models && p.models.length) {
-            <div class="flex flex-wrap items-center gap-1">
-              @for (m of p.models.slice(0, 3); track m) {
-                <span class="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">{{ m }}</span>
-              }
-              @if (p.models.length > 3) {
-                <span class="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-600/70 text-gray-600 dark:text-gray-400">+{{ p.models.length - 3 }} more</span>
-              }
-            </div>
-          }
           @if (p.dynamic) {
             <div class="flex gap-2">
               <button type="button" (click)="openEditProvider(p.name)" class="text-xs text-primary-600 dark:text-primary-400 hover:underline">Edit</button>
@@ -47,16 +47,34 @@
   }
 
   @if (showAddProvider()) {
-    <div class="mt-6 p-4 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ editingProvider() ? 'Edit provider' : 'Register new provider' }}</h3>
-        @if (!editingProvider()) {
-          <div class="flex items-center gap-2">
-            <input #providerFileInput type="file" accept=".json,application/json" (change)="onImportProviderJson($event)" class="hidden" />
-            <button type="button" (click)="providerFileInput.click()" class="btn-secondary text-sm py-1.5 px-3">Import JSON</button>
-          </div>
-        }
-      </div>
+    <div
+      class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      (click)="cancelAddProvider()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="provider-form-title"
+    >
+      <div
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 id="provider-form-title" class="text-lg font-semibold text-gray-900 dark:text-white">{{ editingProvider() ? 'Edit provider' : 'Register new provider' }}</h2>
+          @if (!editingProvider()) {
+            <div class="flex items-center gap-2">
+              <input #providerFileInput type="file" accept=".json,application/json" (change)="onImportProviderJson($event)" class="hidden" />
+              <button type="button" (click)="providerFileInput.click()" class="btn-secondary text-sm py-1.5 px-3">Import JSON</button>
+              <button type="button" (click)="cancelAddProvider()" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label="Close">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+          } @else {
+            <button type="button" (click)="cancelAddProvider()" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label="Close">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          }
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
       <p class="text-xs text-gray-500 dark:text-gray-400">{{ editingProvider() ? 'Change API key, base URL, models, or default model. Provider name and type cannot be changed.' : 'Add a provider (e.g. OpenRouter, Ollama, AWS Bedrock) then use it in Model configs. Type: openai, anthropic, ollama, or bedrock. Or upload a JSON file with provider, type, and optional apiKey, secretKey (bedrock), baseUrl/region, models, defaultModel.' }}</p>
       <div class="grid gap-3">
         <label class="block text-sm text-gray-700 dark:text-gray-300">Provider name</label>
@@ -70,8 +88,17 @@
           <option value="bedrock">AWS Bedrock (bedrock)</option>
         </select>
         @if (providerForm.type === 'openai' || providerForm.type === 'anthropic') {
-          <label class="block text-sm text-gray-700 dark:text-gray-300">API key @if (!editingProvider()) { <span class="text-red-500">*</span> }</label>
-          <input type="password" [(ngModel)]="providerForm.apiKey" class="input-field" [placeholder]="editingProvider() ? 'Leave blank to keep current key' : 'sk-... (required for OpenAI/Anthropic)'" />
+          <label class="block text-sm text-gray-700 dark:text-gray-300">API key<span *ngIf="!editingProvider()" class="text-red-500">*</span></label>
+          <div class="relative">
+            <input [type]="showApiKey() ? 'text' : 'password'" [(ngModel)]="providerForm.apiKey" class="input-field pr-10" [placeholder]="editingProvider() ? 'Leave blank to keep current key' : 'sk-... (required for OpenAI/Anthropic)'" />
+            <button type="button" (click)="showApiKey.set(!showApiKey())" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" [attr.aria-label]="showApiKey() ? 'Hide API key' : 'Show API key'" title="{{ showApiKey() ? 'Hide' : 'Show' }}">
+              @if (showApiKey()) {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+              } @else {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              }
+            </button>
+          </div>
           @if (editingProvider()) {
             <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Leave blank to keep the current API key; enter a new value to change it.</p>
           }
@@ -81,10 +108,28 @@
           <input type="text" [(ngModel)]="providerForm.baseUrl" class="input-field" placeholder="e.g. us-east-1" />
           <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">AWS region where Bedrock is available. Leave blank for us-east-1.</p>
           <label class="block text-sm text-gray-700 dark:text-gray-300">AWS access key (optional)</label>
-          <input type="password" [(ngModel)]="providerForm.apiKey" class="input-field" [placeholder]="editingProvider() ? 'Leave blank to keep current' : 'Or use AWS_ACCESS_KEY_ID env'" />
+          <div class="relative">
+            <input [type]="showApiKey() ? 'text' : 'password'" [(ngModel)]="providerForm.apiKey" class="input-field pr-10" [placeholder]="editingProvider() ? 'Leave blank to keep current' : 'Or use AWS_ACCESS_KEY_ID env'" />
+            <button type="button" (click)="showApiKey.set(!showApiKey())" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" [attr.aria-label]="showApiKey() ? 'Hide' : 'Show'" title="{{ showApiKey() ? 'Hide' : 'Show' }}">
+              @if (showApiKey()) {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+              } @else {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              }
+            </button>
+          </div>
           <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Leave blank to use default credential chain (env vars, ~/.aws/credentials).</p>
           <label class="block text-sm text-gray-700 dark:text-gray-300">AWS secret key (optional)</label>
-          <input type="password" [(ngModel)]="providerForm.secretKey" class="input-field" [placeholder]="editingProvider() ? 'Leave blank to keep current' : 'Or use AWS_SECRET_ACCESS_KEY env'" />
+          <div class="relative">
+            <input [type]="showSecretKey() ? 'text' : 'password'" [(ngModel)]="providerForm.secretKey" class="input-field pr-10" [placeholder]="editingProvider() ? 'Leave blank to keep current' : 'Or use AWS_SECRET_ACCESS_KEY env'" />
+            <button type="button" (click)="showSecretKey.set(!showSecretKey())" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" [attr.aria-label]="showSecretKey() ? 'Hide' : 'Show'" title="{{ showSecretKey() ? 'Hide' : 'Show' }}">
+              @if (showSecretKey()) {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+              } @else {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              }
+            </button>
+          </div>
           <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Required if you set access key above.</p>
         }
         @if (providerForm.type !== 'bedrock') {
@@ -108,10 +153,12 @@
           </select>
         }
       </div>
-      <div class="flex flex-wrap gap-2 pt-2">
-        <button type="button" (click)="submitAddProvider()" class="btn-primary text-sm">{{ editingProvider() ? 'Update' : 'Register' }}</button>
-        <button type="button" (click)="cancelAddProvider()" class="btn-secondary text-sm">Cancel</button>
+        <div class="flex flex-wrap gap-2 px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+          <button type="button" (click)="submitAddProvider()" class="btn-primary text-sm">{{ editingProvider() ? 'Update' : 'Register' }}</button>
+          <button type="button" (click)="cancelAddProvider()" class="btn-secondary text-sm">Cancel</button>
+        </div>
       </div>
+    </div>
     </div>
   }
 </div>

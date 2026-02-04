@@ -22,6 +22,7 @@ A scalable, extensible chat system with configurable AI models, real-time commun
 ## Documentation
 
 - **[USAGE.md](USAGE.md)** — How to use the application: sign in, chat, add model providers, model configs, and MCP servers (UI and API).
+- **Backend / MCP OAuth** — [backend/docs/BACKEND.md](backend/docs/BACKEND.md), [backend/docs/MCP_OAUTH_DESIGN.md](backend/docs/MCP_OAUTH_DESIGN.md), [backend/docs/ATLASSIAN_MCP_SERVER.md](backend/docs/ATLASSIAN_MCP_SERVER.md) (Atlassian MCP: register client, connect, tokens, refresh).
 - **Architecture** — See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation (if present).
 
 ## Prerequisites

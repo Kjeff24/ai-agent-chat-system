@@ -131,6 +131,7 @@ So: **Controller → ConversationService → AIModelService (+ optional MCP tool
 ## MCP Integration (Model-Driven Tools)
 
 - MCP servers are configured in `application.yml` under `mcp.servers` or added at runtime via `POST /api/mcp/servers`.
+- OAuth-enabled MCP (e.g. Atlassian): see [MCP_OAUTH_DESIGN.md](./MCP_OAUTH_DESIGN.md) and [ATLASSIAN_MCP_SERVER.md](./ATLASSIAN_MCP_SERVER.md) for setup (register client, connect, tokens, refresh).
 - For each server, the backend uses the MCP Java SDK (Streamable HTTP) to connect, list tools, and call tools.
 - When a user sends a message and MCP is enabled, `ConversationServiceImpl` gets `List<ToolCallback>` from `McpClientService.getToolCallbacks()` and passes it to `AIModelService.generate(..., toolCallbacks)`.
 - The model sees tool definitions (name, description, input schema) and can request tool calls; the framework invokes the matching `ToolCallback.call(toolInput)`, which runs `McpClientService.executeTool(...)` and returns the result to the model.

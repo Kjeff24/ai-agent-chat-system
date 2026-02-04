@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal, computed, OnDestroy } from '@angular/core';
+import { Component, input, Input, Output, EventEmitter, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
@@ -20,13 +20,17 @@ import {
   templateUrl: './providers-tab.component.html',
 })
 export class ProvidersTabComponent implements OnDestroy {
-  @Input() registry: RegistryResponse | null = null;
+  /** Signal input so computed(providersWithMeta) updates when parent refreshes the list. */
+  registry = input<RegistryResponse | null>(null);
   @Input() loading = false;
   @Output() refresh = new EventEmitter<void>();
   @Output() errorMessage = new EventEmitter<string | null>();
 
   showAddProvider = signal(false);
   editingProvider = signal<string | null>(null);
+  /** Toggle visibility of API key / secret key fields. */
+  showApiKey = signal(false);
+  showSecretKey = signal(false);
 
   providerForm: Partial<RegisterModelRequest> = {
     provider: '',
@@ -38,7 +42,7 @@ export class ProvidersTabComponent implements OnDestroy {
   };
   modelsInput = '';
 
-  providersWithMeta = computed(() => this.registry?.providersWithMeta ?? []);
+  providersWithMeta = computed(() => this.registry()?.providersWithMeta ?? []);
 
   private destroy$ = new Subject<void>();
 

@@ -134,6 +134,10 @@ public class McpOAuthServiceImpl implements McpOAuthService {
                 String at = (String) responseBody.get("access_token");
                 logger.debug("Access token present, length={}", at != null ? at.length() : 0);
             }
+            if (responseBody.containsKey("scope")) {
+                Object scopeObj = responseBody.get("scope");
+                logger.debug("Token scope: {}", scopeObj);
+            }
         }
 
         if (response.getStatusCode() != HttpStatus.OK || responseBody == null) {
@@ -144,9 +148,16 @@ public class McpOAuthServiceImpl implements McpOAuthService {
         String accessToken = (String) json.get("access_token");
         String refreshToken = (String) json.get("refresh_token");
         Number expiresIn = (Number) json.get("expires_in");
+        String scope = null;
+        Object scopeObj = json.get("scope");
+        if (scopeObj != null) {
+            scope = scopeObj.toString().trim();
+            if (scope.isEmpty()) scope = null;
+        }
         // Debug only: do not enable DEBUG logging in production (tokens are sensitive)
         logger.debug("Access token: {}", accessToken);
         logger.debug("Refresh token: {}", refreshToken);
+        logger.debug("Scope: {}", scope);
         if (accessToken == null || accessToken.isBlank()) {
             logger.warn("OAuth response missing access_token");
             return null;
@@ -154,8 +165,8 @@ public class McpOAuthServiceImpl implements McpOAuthService {
         Instant expiresAt = expiresIn != null && expiresIn.intValue() > 0
                 ? Instant.now().plusSeconds(expiresIn.longValue())
                 : null;
-        saveToken(userId, serverName, accessToken, refreshToken, expiresAt);
-        logger.info("OAuth token stored for user {} server {}", userId, serverName);
+        saveToken(userId, serverName, accessToken, refreshToken, expiresAt, scope, providerId);
+        logger.info("OAuth token stored for user {} server {} (scope={})", userId, serverName, scope);
         return userId;
     }
 
@@ -168,11 +179,12 @@ public class McpOAuthServiceImpl implements McpOAuthService {
         if (token == null) {
             return null;
         }
-        if (token.isExpired() && token.getRefreshToken() != null && !token.getRefreshToken().isBlank()) {
-            // Optional: refresh token here; for now we just return null if expired
-            return null;
-        }
         if (token.isExpired()) {
+            if (token.getRefreshToken() != null && !token.getRefreshToken().isBlank()
+                    && token.getProviderId() != null && !token.getProviderId().isBlank()) {
+                String refreshed = refreshAccessToken(token);
+                if (refreshed != null) return refreshed;
+            }
             return null;
         }
         return token.getAccessToken();
@@ -211,7 +223,7 @@ public class McpOAuthServiceImpl implements McpOAuthService {
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(state).getPayload();
     }
 
-    private void saveToken(UUID userId, String serverName, String accessToken, String refreshToken, Instant expiresAt) {
+    private void saveToken(UUID userId, String serverName, String accessToken, String refreshToken, Instant expiresAt, String scope, String providerId) {
         McpOAuthToken token = tokenRepository.findByUserIdAndServerName(userId, serverName)
                 .orElseGet(McpOAuthToken::new);
         token.setUserId(userId);
@@ -219,8 +231,68 @@ public class McpOAuthServiceImpl implements McpOAuthService {
         token.setAccessToken(accessToken);
         token.setRefreshToken(refreshToken);
         token.setExpiresAt(expiresAt);
+        token.setScope(scope);
+        if (providerId != null) token.setProviderId(providerId);
         token.setUpdatedAt(Instant.now());
         tokenRepository.save(token);
+    }
+
+    /**
+     * POST to provider token_uri with grant_type=refresh_token. Saves new tokens and returns new access token.
+     * @return new access token, or null if refresh failed
+     */
+    @Transactional
+    private String refreshAccessToken(McpOAuthToken token) {
+        String providerId = token.getProviderId();
+        if (providerId == null || providerId.isBlank()) return null;
+        AppMcpOAuthProperties.OAuthProviderConfig provider = providerRegistry.getProvider(providerId);
+        if (provider == null || provider.getTokenUri() == null) return null;
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("grant_type", "refresh_token");
+        body.add("refresh_token", token.getRefreshToken());
+        body.add("client_id", provider.getClientId());
+        if (provider.getClientSecret() != null && !provider.getClientSecret().isBlank()) {
+            body.add("client_secret", provider.getClientSecret());
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        try {
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    provider.getTokenUri(),
+                    HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                logger.warn("OAuth refresh failed: status={}", response.getStatusCode());
+                return null;
+            }
+            Map<String, Object> json = response.getBody();
+            String accessToken = (String) json.get("access_token");
+            if (accessToken == null || accessToken.isBlank()) {
+                logger.warn("OAuth refresh response missing access_token");
+                return null;
+            }
+
+            String newRefresh = (String) json.get("refresh_token");
+            Number expiresIn = (Number) json.get("expires_in");
+            Object scopeObj = json.get("scope");
+            String scope = scopeObj != null ? scopeObj.toString().trim() : null;
+            if (scope != null && scope.isEmpty()) scope = null;
+            Instant expiresAt = expiresIn != null && expiresIn.intValue() > 0
+                    ? Instant.now().plusSeconds(expiresIn.longValue())
+                    : null;
+
+            String refreshToStore = (newRefresh != null && !newRefresh.isBlank()) ? newRefresh : token.getRefreshToken();
+            saveToken(token.getUserId(), token.getServerName(), accessToken, refreshToStore, expiresAt, scope, providerId);
+            logger.info("OAuth token refreshed for user {} server {}", token.getUserId(), token.getServerName());
+            return accessToken;
+        } catch (Exception e) {
+            logger.warn("OAuth refresh failed for user {} server {}: {}", token.getUserId(), token.getServerName(), e.getMessage());
+            return null;
+        }
     }
 
     private static String urlEncode(String s) {
