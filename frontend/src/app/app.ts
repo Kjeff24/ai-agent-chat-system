@@ -4,6 +4,9 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { ChatWindowComponent } from './components/chat-window/chat-window.component';
 import { ConversationListComponent } from './components/conversation-list/conversation-list.component';
 import { AuthComponent } from './components/auth/auth.component';
+import { SettingsComponent } from './components/settings/settings.component';
+import { ToastComponent } from './components/toast/toast.component';
+import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { ChatService } from './services/chat.service';
 import { WebSocketService } from './services/websocket.service';
 import { AuthService } from './services/auth.service';
@@ -16,7 +19,15 @@ const LG = '(min-width: 1024px)';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, ChatWindowComponent, ConversationListComponent, AuthComponent],
+  imports: [
+    CommonModule,
+    ChatWindowComponent,
+    ConversationListComponent,
+    AuthComponent,
+    SettingsComponent,
+    ToastComponent,
+    ConfirmDialogComponent,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -24,6 +35,7 @@ export class App implements OnInit, OnDestroy {
   title = 'AI Agent Chat System';
   isLoggedIn = false;
   sidebarOpen = true;
+  showSettings = false;
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -71,6 +83,14 @@ export class App implements OnInit, OnDestroy {
     try {
       localStorage.setItem(SIDEBAR_KEY, String(this.sidebarOpen));
     } catch (_) {}
+  }
+
+  openSettings(): void {
+    this.showSettings = true;
+  }
+
+  closeSettings(): void {
+    this.showSettings = false;
   }
 
 }
