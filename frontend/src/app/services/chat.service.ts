@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ApiService } from './api.service';
 import { WebSocketService } from './websocket.service';
+import { ToastService } from './toast.service';
 import { Conversation } from '../models/conversation.model';
 import { Message } from '../models/message.model';
 
@@ -23,7 +24,8 @@ export class ChatService {
 
   constructor(
     private apiService: ApiService,
-    private websocketService: WebSocketService
+    private websocketService: WebSocketService,
+    private toast: ToastService
   ) {
     this.websocketService.getMessages().subscribe(message => {
       const conv = this.currentConversationSubject.value;
@@ -88,8 +90,10 @@ export class ChatService {
         this.conversationsSubject.next([conversation, ...conversations]);
         this.selectConversation(conversation.id);
       },
-      error: (error) => {
-        console.error('Error creating conversation:', error);
+      error: (err) => {
+        console.error('Error creating conversation:', err);
+        const msg = err?.error?.error ?? err?.error?.message ?? err?.message ?? 'Could not create conversation. Try logging in again.';
+        this.toast.error(String(msg));
       }
     });
   }
@@ -177,9 +181,11 @@ export class ChatService {
           this.messagesSubject.next([...messages, normalized]);
         }
       },
-      error: (error) => {
+      error: (err) => {
         this.waitingForReplySubject.next(false);
-        console.error('Error sending message:', error);
+        console.error('Error sending message:', err);
+        const msg = err?.error?.error ?? err?.error?.message ?? err?.message ?? 'Failed to send message.';
+        this.toast.error(String(msg));
         const messages = this.messagesSubject.value.filter(m => m.id !== userMessage.id);
         this.messagesSubject.next(messages);
       }
@@ -221,6 +227,8 @@ export class ChatService {
       error: (err) => {
         this.creatingAndSending = false;
         console.error('Error creating conversation:', err);
+        const msg = err?.error?.error ?? err?.error?.message ?? err?.message ?? 'Could not create conversation. Try logging in again.';
+        this.toast.error(String(msg));
       }
     });
     return true;

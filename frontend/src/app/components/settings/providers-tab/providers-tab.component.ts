@@ -43,6 +43,11 @@ export class ProvidersTabComponent implements OnDestroy {
   modelsInput = '';
 
   providersWithMeta = computed(() => this.registry()?.providersWithMeta ?? []);
+  /** Current default provider key (active); used for green border and grey "use provider". */
+  defaultProvider = computed(() => {
+    const key = this.registry()?.defaultProvider;
+    return key != null && key !== '' ? key : null;
+  });
 
   private destroy$ = new Subject<void>();
 
@@ -266,6 +271,25 @@ export class ProvidersTabComponent implements OnDestroy {
         },
         error: (err) => {
           const msg = err?.error?.error || err?.error?.message || err?.message || 'Update failed';
+          this.errorMessage.emit(msg);
+          this.toast.error(msg);
+        },
+      });
+  }
+
+  setAsDefaultProvider(providerName: string): void {
+    if (this.defaultProvider() === providerName) return;
+    this.errorMessage.emit(null);
+    this.api
+      .setDefaultProvider(providerName)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.refresh.emit();
+          this.toast.success('Default provider set to ' + providerName);
+        },
+        error: (err) => {
+          const msg = err?.error?.error || err?.error?.message || err?.message || 'Failed to set default provider';
           this.errorMessage.emit(msg);
           this.toast.error(msg);
         },

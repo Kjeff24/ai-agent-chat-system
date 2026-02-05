@@ -10,7 +10,11 @@
     <ul class="space-y-2">
       @for (p of providersWithMeta(); track p.name) {
         <li
-          class="flex flex-col gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
+          class="flex flex-col gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border transition-colors"
+          [class.border-green-500]="defaultProvider() === p.name"
+          [class.border-2]="defaultProvider() === p.name"
+          [class.border-gray-200]="defaultProvider() !== p.name"
+          [class.dark:border-gray-600]="defaultProvider() !== p.name"
         >
           <div class="flex flex-wrap items-center gap-2 min-w-0">
             <span class="font-medium text-gray-900 dark:text-white">{{ p.name }}</span>
@@ -31,12 +35,17 @@
               </div>
             }
           </div>
-          @if (p.dynamic) {
-            <div class="flex gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            @if (defaultProvider() === p.name) {
+              <span class="text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed" title="Active default provider">use provider</span>
+            } @else {
+              <button type="button" (click)="setAsDefaultProvider(p.name)" class="text-xs text-green-600 dark:text-green-400 hover:underline">use provider</button>
+            }
+            @if (p.dynamic) {
               <button type="button" (click)="openEditProvider(p.name)" class="text-xs text-primary-600 dark:text-primary-400 hover:underline">Edit</button>
               <button type="button" (click)="unregisterProvider(p.name, $event)" class="text-xs text-red-600 dark:text-red-400 hover:underline">Remove</button>
-            </div>
-          }
+            }
+          </div>
         </li>
       }
       @empty {

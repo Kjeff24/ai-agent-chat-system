@@ -1,6 +1,8 @@
 package com.aiagent.chatsystem.config;
 
 import com.aiagent.chatsystem.exception.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,8 +15,11 @@ import java.util.regex.Pattern;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final Pattern OLLAMA_MODEL_NOT_FOUND =
             Pattern.compile("model\\s+(.+?)\\s+not\\s+found", Pattern.CASE_INSENSITIVE);
+    /** Provider error message format: "402 - {\"error\":{\"message\":\"...\"},...}" */
+    private static final Pattern PROVIDER_STATUS_BODY = Pattern.compile("^(\\d{3})\\s*-\\s*(.+)$", Pattern.DOTALL);
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ResponseEntity<Map<String, String>> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
@@ -23,6 +28,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<Map<String, String>> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotFound(UserNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ex.getMessage()));
     }
 
@@ -81,6 +91,32 @@ public class GlobalExceptionHandler {
         String msg = ex.getMessage();
         if (msg == null) {
             throw ex;
+        }
+
+        // Spring AI / OpenRouter provider errors: "402 - {\"error\":{\"message\":\"...\"},...}"
+        Matcher providerMatch = PROVIDER_STATUS_BODY.matcher(msg.trim());
+        if (providerMatch.matches()) {
+            try {
+                int statusCode = Integer.parseInt(providerMatch.group(1));
+                String body = providerMatch.group(2).trim();
+                String userMessage = msg;
+                try {
+                    JsonNode root = objectMapper.readTree(body);
+                    JsonNode error = root.get("error");
+                    if (error != null && error.has("message")) {
+                        userMessage = error.get("message").asText();
+                    }
+                } catch (Exception ignored) {
+                    // use full message if JSON parse fails
+                }
+                HttpStatus status = statusCode == 402 ? HttpStatus.PAYMENT_REQUIRED
+                        : statusCode == 429 ? HttpStatus.TOO_MANY_REQUESTS
+                        : statusCode >= 400 && statusCode < 500 ? HttpStatus.BAD_REQUEST
+                        : HttpStatus.SERVICE_UNAVAILABLE;
+                return ResponseEntity.status(status).body(Map.of("error", userMessage));
+            } catch (NumberFormatException ignored) {
+                // fall through
+            }
         }
 
         if (msg.contains("try pulling")) {
