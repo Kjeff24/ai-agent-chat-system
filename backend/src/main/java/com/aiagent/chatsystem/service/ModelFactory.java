@@ -7,7 +7,7 @@ import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.anthropic.api.AnthropicApi;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.ollama.api.OllamaOptions;
+import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
@@ -79,11 +79,17 @@ public class ModelFactory {
                 : OPENAI_DEFAULT_BASE;
         String model = resolveDefaultModel(request, OPENAI_DEFAULT_MODEL);
 
-        OpenAiApi api = new OpenAiApi(baseUrl, apiKey);
-        OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .withModel(model)
+        OpenAiApi api = OpenAiApi.builder()
+                .baseUrl(baseUrl)
+                .apiKey(apiKey)
                 .build();
-        return new OpenAiChatModel(api, options);
+        OpenAiChatOptions options = OpenAiChatOptions.builder()
+                .model(model)
+                .build();
+        return OpenAiChatModel.builder()
+                .openAiApi(api)
+                .defaultOptions(options)
+                .build();
     }
 
     private ChatModel buildAnthropic(RegisterModelRequest request) {
@@ -96,13 +102,17 @@ public class ModelFactory {
                 : ANTHROPIC_DEFAULT_BASE;
         String model = resolveDefaultModel(request, ANTHROPIC_DEFAULT_MODEL);
 
-        AnthropicApi api = baseUrl.equals(ANTHROPIC_DEFAULT_BASE)
-                ? new AnthropicApi(apiKey)
-                : new AnthropicApi(apiKey, baseUrl);
-        AnthropicChatOptions options = AnthropicChatOptions.builder()
-                .withModel(model)
+        AnthropicApi api = AnthropicApi.builder()
+                .baseUrl(baseUrl)
+                .apiKey(apiKey)
                 .build();
-        return new AnthropicChatModel(api, options);
+        AnthropicChatOptions options = AnthropicChatOptions.builder()
+                .model(model)
+                .build();
+        return AnthropicChatModel.builder()
+                .anthropicApi(api)
+                .defaultOptions(options)
+                .build();
     }
 
     private ChatModel buildOllama(RegisterModelRequest request) {
@@ -111,13 +121,15 @@ public class ModelFactory {
                 : OLLAMA_DEFAULT_BASE;
         String model = resolveDefaultModel(request, OLLAMA_DEFAULT_MODEL);
 
-        OllamaApi api = new OllamaApi(baseUrl);
-        OllamaOptions options = OllamaOptions.builder()
-                .withModel(model)
+        OllamaApi api = OllamaApi.builder()
+                .baseUrl(baseUrl)
+                .build();
+        OllamaChatOptions options = OllamaChatOptions.builder()
+                .model(model)
                 .build();
         return OllamaChatModel.builder()
-                .withOllamaApi(api)
-                .withDefaultOptions(options)
+                .ollamaApi(api)
+                .defaultOptions(options)
                 .build();
     }
 }

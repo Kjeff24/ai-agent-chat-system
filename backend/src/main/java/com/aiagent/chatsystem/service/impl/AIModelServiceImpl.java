@@ -33,7 +33,7 @@ public class AIModelServiceImpl implements AIModelService {
         Flux<ChatResponse> responseFlux = chatModel.stream(prompt);
         
         return responseFlux
-                .map(response -> response.getResult().getOutput().getContent())
+                .map(response -> response.getResult().getOutput().getText())
                 .filter(content -> content != null && !content.isEmpty());
     }
     
@@ -43,7 +43,8 @@ public class AIModelServiceImpl implements AIModelService {
         Prompt prompt = getPromptWithOptions(messages, config);
         
         ChatResponse response = chatModel.call(prompt);
-        return Mono.just(response.getResult().getOutput().getContent());
+        String text = response.getResult().getOutput().getText();
+        return Mono.just(text != null ? text : "");
     }
     
     @Override

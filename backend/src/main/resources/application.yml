@@ -63,17 +63,11 @@ jwt:
 cors:
   allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
 
-# MCP: add servers via Settings (MCP tab) or here. When at least one server is configured, MCP is enabled.
-# Each server can define its own default-context-tool(s) and query-transforms. When set, they override
-# the top-level fallbacks below. Tool results are combined and prepended as context for the model.
-#
-# Top-level fallback (used when a server does not define its own):
-#   default-context-tool: used when a server has no default-context-tool
-#   query-transforms: used when a server has no query-transforms
+# MCP: context-injection style (first style). The backend calls default-context-tool(s) with the user
+# message (and optional query-transforms), then injects tool results into the prompt. The model does
+# not choose tools. Add servers via Settings (MCP tab) or here. When at least one server is configured,
+# MCP is enabled. Each server defines its own default-context-tool(s) and query-transforms.
 mcp:
-  default-context-tool: ${MCP_DEFAULT_CONTEXT_TOOL:search_repositories}
-  query-transforms: {}
-
   servers:
     # -------------------------------------------------------------------------
     # GitHub MCP (remote): repos, issues, PRs, code search. Requires GITHUB_PAT.
@@ -126,3 +120,4 @@ logging:
     org.springframework.ai: DEBUG
     # MCP Java SDK: reduce noise from 405 when server only supports Streamable HTTP (POST), not GET/SSE
     # io.modelcontextprotocol.client.LifecycleInitializer: ERROR
+
