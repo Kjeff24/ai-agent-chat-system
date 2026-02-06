@@ -28,8 +28,16 @@ public class Conversation {
     
     @Column(nullable = true)
     private String title;
+
+    /** Provider key from registry (e.g. openai, bedrock). Used for AI model selection. */
+    @Column(name = "provider_key", length = 64)
+    private String providerKey;
+
+    /** Model ID for the provider (e.g. gpt-4, anthropic.claude-3-5-sonnet-...). */
+    @Column(name = "model", length = 256)
+    private String model;
     
-    @Column(name = "model_config_id", nullable = false)
+    @Column(name = "model_config_id")
     private UUID modelConfigId;
     
     @JdbcTypeCode(SqlTypes.JSON)
