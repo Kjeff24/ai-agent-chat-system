@@ -46,6 +46,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(McpOAuthProviderNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleMcpOAuthProviderNotFound(McpOAuthProviderNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(ModelProviderNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleModelProviderNotFound(ModelProviderNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
@@ -58,6 +63,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoDefaultModelConfigException.class)
     public ResponseEntity<Map<String, String>> handleNoDefaultModelConfig(NoDefaultModelConfigException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(NoDefaultProviderException.class)
+    public ResponseEntity<Map<String, String>> handleNoDefaultProvider(NoDefaultProviderException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", ex.getMessage()));
     }
 
