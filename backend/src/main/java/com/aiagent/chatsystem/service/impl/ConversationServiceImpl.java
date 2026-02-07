@@ -5,12 +5,10 @@ import com.aiagent.chatsystem.dto.CreateConversationRequest;
 import com.aiagent.chatsystem.dto.MessageDTO;
 import com.aiagent.chatsystem.dto.SendMessageRequest;
 import com.aiagent.chatsystem.dto.UpdateConversationRequest;
-import com.aiagent.chatsystem.config.McpProperties;
-import com.aiagent.chatsystem.dto.McpServerSummaryDTO;
 import com.aiagent.chatsystem.exception.ConversationAccessDeniedException;
 import com.aiagent.chatsystem.exception.ConversationNotFoundException;
 import com.aiagent.chatsystem.exception.ModelConfigNotFoundException;
-import com.aiagent.chatsystem.exception.NoDefaultModelConfigException;
+import com.aiagent.chatsystem.exception.NoDefaultProviderException;
 import com.aiagent.chatsystem.model.Conversation;
 import com.aiagent.chatsystem.model.Message;
 import com.aiagent.chatsystem.model.ModelConfig;
@@ -20,6 +18,9 @@ import com.aiagent.chatsystem.repository.ModelConfigRepository;
 import com.aiagent.chatsystem.service.AIModelService;
 import com.aiagent.chatsystem.service.ConversationService;
 import com.aiagent.chatsystem.service.McpClientService;
+import com.aiagent.chatsystem.service.ModelRegistry;
+import com.aiagent.chatsystem.service.SystemPromptService;
+import org.springframework.ai.tool.ToolCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -27,14 +28,11 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 @Service
 public class ConversationServiceImpl implements ConversationService {
@@ -44,22 +42,28 @@ public class ConversationServiceImpl implements ConversationService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final ModelConfigRepository modelConfigRepository;
+    private final ModelRegistry modelRegistry;
     private final AIModelService aiModelService;
     private final McpClientService mcpClientService;
+    private final SystemPromptService systemPromptService;
     private final SimpMessagingTemplate messagingTemplate;
 
     public ConversationServiceImpl(
             ConversationRepository conversationRepository,
             MessageRepository messageRepository,
             ModelConfigRepository modelConfigRepository,
+            ModelRegistry modelRegistry,
             AIModelService aiModelService,
             McpClientService mcpClientService,
+            SystemPromptService systemPromptService,
             SimpMessagingTemplate messagingTemplate) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.modelConfigRepository = modelConfigRepository;
+        this.modelRegistry = modelRegistry;
         this.aiModelService = aiModelService;
         this.mcpClientService = mcpClientService;
+        this.systemPromptService = systemPromptService;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -78,15 +82,30 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
+    @Transactional
     public ConversationDTO createConversation(CreateConversationRequest request, UUID userId) {
-        ModelConfig defaultConfig = modelConfigRepository.findByIsDefaultTrueAndIsActiveTrue()
-                .orElseThrow(() -> new NoDefaultModelConfigException(
-                        "No default model configuration found. Restart the backend to seed one, or add a config via GET /api/models and set it as default."));
+        String providerKey;
+        String model;
+        if (request != null && request.getProviderKey() != null && !request.getProviderKey().isBlank()) {
+            providerKey = request.getProviderKey().trim().toLowerCase();
+            model = (request.getModel() != null && !request.getModel().isBlank())
+                    ? request.getModel().trim()
+                    : modelRegistry.getDefaultModel(providerKey);
+        } else {
+            providerKey = modelRegistry.getDefaultProviderKey();
+            if (providerKey == null) {
+                throw new NoDefaultProviderException(
+                        "No default model provider found. Add a provider in Settings (e.g. OpenAI, Ollama, Bedrock).");
+            }
+            model = modelRegistry.getDefaultModel(providerKey);
+        }
 
         Conversation conversation = new Conversation();
         conversation.setUserId(userId);
         conversation.setTitle(request != null ? request.getTitle() : null);
-        conversation.setModelConfigId(defaultConfig.getId());
+        conversation.setProviderKey(providerKey);
+        conversation.setModel(model);
+        conversation.setModelConfigId(null);
         conversation = conversationRepository.save(conversation);
         return toDTO(conversation);
     }
@@ -101,6 +120,7 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
+    @Transactional
     public MessageDTO sendMessage(UUID conversationId, SendMessageRequest request, UUID userId) {
         Conversation conversation = findConversationOrThrow(conversationId);
         ensureOwnership(conversation, userId);
@@ -124,54 +144,51 @@ public class ConversationServiceImpl implements ConversationService {
             }
         }
 
-        UUID modelConfigId = conversation.getModelConfigId();
+        String providerKey;
+        String model;
+        if (conversation.getProviderKey() != null && !conversation.getProviderKey().isBlank()) {
+            providerKey = conversation.getProviderKey().trim().toLowerCase();
+            model = conversation.getModel() != null ? conversation.getModel().trim() : null;
+            if (model != null && model.isBlank()) model = null;
+        } else {
+            // Backward compatibility: resolve from legacy modelConfigId
+            UUID modelConfigId = conversation.getModelConfigId();
+            if (modelConfigId == null) {
+                throw new IllegalStateException(
+                        "Conversation has no provider/model and no legacy modelConfigId. Update the conversation with a provider and model.");
+            }
+            ModelConfig modelConfig = modelConfigRepository.findById(modelConfigId)
+                    .orElseThrow(() -> new ModelConfigNotFoundException(modelConfigId));
+            providerKey = modelConfigToProviderKey(modelConfig);
+            model = modelConfig.getModel();
+        }
+
         List<org.springframework.ai.chat.messages.Message> aiMessages = history.stream()
                 .<org.springframework.ai.chat.messages.Message>map(msg -> msg.getRole() == Message.MessageRole.user
                         ? new UserMessage(msg.getContent())
                         : new AssistantMessage(msg.getContent()))
                 .toList();
 
-        if (mcpClientService.isEnabled()) {
-            String rawMessage = request.getContent() != null ? request.getContent().trim() : "";
-            List<String> parts = new ArrayList<>();
-            for (McpServerSummaryDTO server : mcpClientService.listServers()) {
-                String serverName = server.getName();
-                if (serverName == null || serverName.isBlank()) continue;
-                List<String> defaultTools = mcpClientService.getDefaultContextTools(serverName);
-                if (defaultTools == null || defaultTools.isEmpty()) continue;
-                Map<String, List<McpProperties.QueryTransformRule>> queryTransforms = mcpClientService.getQueryTransforms(serverName);
-                for (String toolName : defaultTools) {
-                    if (toolName == null || toolName.isBlank()) continue;
-                    String query = toToolQuery(rawMessage, toolName, queryTransforms);
-                    logger.debug("MCP request: server={}, tool={}, query={}", serverName, toolName, query);
-                    String result = mcpClientService.executeTool(
-                            serverName, toolName, Map.of("query", query));
-                    if (result != null && !result.isBlank()) {
-                        parts.add("--- " + serverName + "/" + toolName + " ---\n" + result);
-                    }
-                }
-            }
-            if (!parts.isEmpty()) {
-                String mcpContext = String.join("\n\n", parts);
-                List<org.springframework.ai.chat.messages.Message> withSystem = new ArrayList<>();
-                withSystem.add(new SystemMessage(
-                        "Relevant context from tools:\n\n" + mcpContext));
-                withSystem.addAll(aiMessages);
-                aiMessages = withSystem;
-                logger.debug("MCP context injected: {} chars from {} tool(s). Preview:\n{}", mcpContext.length(), parts.size(),
-                        mcpContext.length() <= 800 ? mcpContext : mcpContext.substring(0, 800) + "\n... [truncated, total " + mcpContext.length() + " chars]");
-                if (logger.isTraceEnabled()) {
-                    logger.trace("MCP context full output:\n{}", mcpContext);
-                }
-            } else {
-                logger.debug("MCP context empty: no server had default-context-tool(s) returning data for message length {}", rawMessage.length());
-            }
+        String systemPrompt = systemPromptService.getEffectiveSystemPrompt();
+        if (systemPrompt != null && !systemPrompt.isEmpty()) {
+            List<org.springframework.ai.chat.messages.Message> withSystem = new ArrayList<>(aiMessages.size() + 1);
+            withSystem.add(new SystemMessage(systemPrompt));
+            withSystem.addAll(aiMessages);
+            aiMessages = withSystem;
         }
 
-        ModelConfig modelConfig = modelConfigRepository.findById(modelConfigId)
-                .orElseThrow(() -> new ModelConfigNotFoundException(modelConfigId));
-
-        String aiResponse = aiModelService.generate(aiMessages, modelConfig).block();
+        String aiResponse;
+        if (mcpClientService.isEnabled()) {
+            List<ToolCallback> toolCallbacks = mcpClientService.getToolCallbacks(userId);
+            if (!toolCallbacks.isEmpty()) {
+                logger.debug("MCP model-driven tools: {} tool(s) available to model", toolCallbacks.size());
+                aiResponse = aiModelService.generate(aiMessages, providerKey, model, toolCallbacks).block();
+            } else {
+                aiResponse = aiModelService.generate(aiMessages, providerKey, model).block();
+            }
+        } else {
+            aiResponse = aiModelService.generate(aiMessages, providerKey, model).block();
+        }
 
         Message assistantMessage = new Message();
         assistantMessage.setConversationId(conversationId);
@@ -185,20 +202,32 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
+    @Transactional
     public ConversationDTO updateConversation(UUID id, UpdateConversationRequest request, UUID userId) {
         if (!conversationRepository.existsByIdAndUserId(id, userId)) {
             throw new ConversationAccessDeniedException("Access denied");
         }
         Conversation conversation = findConversationOrThrow(id);
-        if (request != null && request.getTitle() != null) {
-            String t = request.getTitle().trim();
-            conversation.setTitle(t.isEmpty() ? null : t);
+        if (request != null) {
+            if (request.getTitle() != null) {
+                String t = request.getTitle().trim();
+                conversation.setTitle(t.isEmpty() ? null : t);
+            }
+            if (request.getProviderKey() != null) {
+                String pk = request.getProviderKey().trim();
+                if (!pk.isEmpty()) conversation.setProviderKey(pk.toLowerCase());
+            }
+            if (request.getModel() != null) {
+                String m = request.getModel().trim();
+                conversation.setModel(m.isEmpty() ? null : m);
+            }
         }
         conversation = conversationRepository.save(conversation);
         return toDTO(conversation);
     }
 
     @Override
+    @Transactional
     public void deleteConversation(UUID id, UUID userId) {
         if (!conversationRepository.existsByIdAndUserId(id, userId)) {
             throw new ConversationAccessDeniedException("Access denied");
@@ -222,6 +251,8 @@ public class ConversationServiceImpl implements ConversationService {
                 c.getId(),
                 c.getUserId(),
                 c.getTitle(),
+                c.getProviderKey(),
+                c.getModel(),
                 c.getModelConfigId(),
                 c.getMetadata(),
                 c.getCreatedAt(),
@@ -229,34 +260,14 @@ public class ConversationServiceImpl implements ConversationService {
         );
     }
 
-    /**
-     * Build the query string to pass to an MCP tool. Uses per-tool rules from the server's query-transforms
-     * (pattern + template; $1, $2, ... in template are replaced by regex capture groups). First matching
-     * rule wins; if no rules are configured for the tool or none match, returns the raw user message.
-     */
-    private String toToolQuery(String rawMessage, String toolName,
-                              Map<String, List<McpProperties.QueryTransformRule>> queryTransforms) {
-        if (rawMessage == null) return "";
-        String trimmed = rawMessage.trim();
-        if (queryTransforms == null) return trimmed;
-        List<McpProperties.QueryTransformRule> rules = queryTransforms.get(toolName);
-        if (rules == null || rules.isEmpty()) return trimmed;
-        for (McpProperties.QueryTransformRule rule : rules) {
-            if (rule.getPattern() == null || rule.getPattern().isBlank() || rule.getTemplate() == null) continue;
-            try {
-                Matcher m = Pattern.compile(rule.getPattern(), Pattern.CASE_INSENSITIVE).matcher(trimmed);
-                if (m.find()) {
-                    String template = rule.getTemplate();
-                    for (int i = 1; i <= m.groupCount(); i++) {
-                        String group = m.group(i);
-                        template = template.replace("$" + i, group != null ? group : "");
-                    }
-                    return template;
-                }
-            } catch (PatternSyntaxException e) {
-                logger.warn("MCP query-transforms invalid pattern for tool {}: {}", toolName, e.getMessage());
-            }
+    /** Resolve registry provider key from legacy ModelConfig. */
+    private String modelConfigToProviderKey(ModelConfig config) {
+        if (config.getProvider() == ModelConfig.ModelProvider.custom
+                && config.getParameters() != null
+                && config.getParameters().get("providerKey") != null) {
+            String key = String.valueOf(config.getParameters().get("providerKey")).trim();
+            if (!key.isEmpty()) return key.toLowerCase();
         }
-        return trimmed;
+        return config.getProvider().name().toLowerCase();
     }
 }
