@@ -8,10 +8,13 @@ import java.util.List;
  */
 public class UpdateProviderRequest {
 
-    /** New API key (for openai/anthropic). Omit to keep current. */
+    /** New API key (for openai/anthropic). For bedrock: AWS access key. Omit to keep current. */
     private String apiKey;
 
-    /** New base URL. Omit to keep current. */
+    /** New AWS secret key (for bedrock only). Omit to keep current. */
+    private String secretKey;
+
+    /** New base URL. For bedrock: AWS region (e.g. us-east-1). Omit to keep current. */
     private String baseUrl;
 
     /** New list of model names. Omit to keep current. */
@@ -26,6 +29,14 @@ public class UpdateProviderRequest {
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+    }
+
+    public String getSecretKey() {
+        return secretKey;
+    }
+
+    public void setSecretKey(String secretKey) {
+        this.secretKey = secretKey;
     }
 
     public String getBaseUrl() {

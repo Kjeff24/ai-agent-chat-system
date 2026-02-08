@@ -6,30 +6,31 @@ import jakarta.validation.constraints.Pattern;
 import java.util.List;
 
 /**
- * Request body for dynamically registering an AI model provider (OpenAI-compatible, Anthropic, or Ollama).
+ * Request body for dynamically registering an AI model provider (OpenAI-compatible, Anthropic, Ollama, or AWS Bedrock).
  * You can supply a list of models and choose which one is the default; the default is used when building
  * the provider and when creating model configs without an explicit model.
  */
 public class RegisterModelRequest {
 
-    /** Unique provider key (e.g. openrouter, my-ollama). Must not conflict with static providers if you need to override. */
+    /** Unique provider key (e.g. openrouter, my-ollama, bedrock). Must not conflict with static providers if you need to override. */
     @NotBlank(message = "Provider name is required")
     private String provider;
 
-    /** Type of provider: openai (OpenAI API, OpenRouter, etc.), anthropic, or ollama. */
+    /** Type of provider: openai (OpenAI API, OpenRouter, etc.), anthropic, ollama, or bedrock. */
     @NotBlank(message = "Type is required")
-    @Pattern(regexp = "openai|anthropic|ollama", message = "Type must be 'openai', 'anthropic', or 'ollama'")
+    @Pattern(regexp = "openai|anthropic|ollama|bedrock", message = "Type must be 'openai', 'anthropic', 'ollama', or 'bedrock'")
     private String type;
 
-    /** API key (required for type=openai and type=anthropic). */
+    /** API key (required for type=openai and type=anthropic). For bedrock: AWS access key (optional if using default credential chain). */
     private String apiKey;
+
+    /** AWS secret key for type=bedrock. Optional if using default credential chain (env vars, ~/.aws/credentials). */
+    private String secretKey;
 
     /**
      * Base URL for the provider API (without the path that the client appends).
-     * This app uses Spring AI's OpenAiApi which appends "/v1/chat/completions" to the base URL.
-     * Examples: https://api.openai.com (OpenAI), https://openrouter.ai/api (OpenRouter; client adds /v1/chat/completions → https://openrouter.ai/api/v1/chat/completions),
-     * http://localhost:11434 (Ollama).
-     * See https://openrouter.ai/docs/quickstart for OpenRouter.
+     * Examples: https://api.openai.com (OpenAI), https://openrouter.ai/api (OpenRouter), http://localhost:11434 (Ollama).
+     * For type=bedrock: use this field as the AWS region (e.g. us-east-1). Leave blank for us-east-1.
      */
     private String baseUrl;
 
@@ -67,6 +68,14 @@ public class RegisterModelRequest {
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+    }
+
+    public String getSecretKey() {
+        return secretKey;
+    }
+
+    public void setSecretKey(String secretKey) {
+        this.secretKey = secretKey;
     }
 
     public String getBaseUrl() {

@@ -35,6 +35,9 @@ public class DynamicProviderRegistration {
     @Column(name = "api_key")
     private String apiKey;
 
+    @Column(name = "secret_key")
+    private String secretKey;
+
     @Column(name = "base_url")
     private String baseUrl;
 

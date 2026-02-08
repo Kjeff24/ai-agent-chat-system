@@ -1,6 +1,8 @@
 package com.aiagent.chatsystem.service;
 
 import com.aiagent.chatsystem.dto.RegisterModelRequest;
+import org.springframework.ai.bedrock.converse.BedrockChatOptions;
+import org.springframework.ai.bedrock.converse.BedrockProxyChatModel;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
@@ -12,9 +14,14 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.stereotype.Component;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 
 /**
- * Builds a ChatModel from a RegisterModelRequest (OpenAI-compatible, Anthropic, or Ollama).
+ * Builds a ChatModel from a RegisterModelRequest (OpenAI-compatible, Anthropic, Ollama, or AWS Bedrock).
  */
 @Component
 public class ModelFactory {
@@ -25,10 +32,12 @@ public class ModelFactory {
     private static final String ANTHROPIC_DEFAULT_MODEL = "claude-3-5-sonnet-latest";
     private static final String OLLAMA_DEFAULT_BASE = "http://localhost:11434";
     private static final String OLLAMA_DEFAULT_MODEL = "llama2";
+    private static final String BEDROCK_DEFAULT_REGION = "us-east-1";
+    private static final String BEDROCK_DEFAULT_MODEL = "anthropic.claude-3-5-sonnet-20240620-v1:0";
 
     /**
      * Build a ChatModel from the request. Supports type "openai" (OpenAI API, OpenRouter, etc.),
-     * "anthropic", and "ollama". Default model is resolved from defaultModel, or first of models list, or type default.
+     * "anthropic", "ollama", and "bedrock". Default model is resolved from defaultModel, or first of models list, or type default.
      */
     public ChatModel build(RegisterModelRequest request) {
         if (request == null || request.getType() == null) {
@@ -39,8 +48,9 @@ public class ModelFactory {
             case "openai" -> buildOpenAi(request);
             case "anthropic" -> buildAnthropic(request);
             case "ollama" -> buildOllama(request);
+            case "bedrock" -> buildBedrock(request);
             default -> throw new IllegalArgumentException(
-                    "Unsupported type: " + type + ". Use 'openai', 'anthropic', or 'ollama'.");
+                    "Unsupported type: " + type + ". Use 'openai', 'anthropic', 'ollama', or 'bedrock'.");
         };
     }
 
@@ -129,6 +139,31 @@ public class ModelFactory {
                 .build();
         return OllamaChatModel.builder()
                 .ollamaApi(api)
+                .defaultOptions(options)
+                .build();
+    }
+
+    private ChatModel buildBedrock(RegisterModelRequest request) {
+        String regionStr = request.getBaseUrl() != null && !request.getBaseUrl().isBlank()
+                ? request.getBaseUrl().trim()
+                : BEDROCK_DEFAULT_REGION;
+        String model = resolveDefaultModel(request, BEDROCK_DEFAULT_MODEL);
+
+        AwsCredentialsProvider credentialsProvider;
+        String accessKey = request.getApiKey() != null ? request.getApiKey().trim() : "";
+        String secretKey = request.getSecretKey() != null ? request.getSecretKey().trim() : "";
+        if (!accessKey.isEmpty() && !secretKey.isEmpty()) {
+            credentialsProvider = StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey));
+        } else {
+            credentialsProvider = DefaultCredentialsProvider.create();
+        }
+
+        BedrockChatOptions options = BedrockChatOptions.builder()
+                .model(model)
+                .build();
+        return BedrockProxyChatModel.builder()
+                .region(Region.of(regionStr))
+                .credentialsProvider(credentialsProvider)
                 .defaultOptions(options)
                 .build();
     }
