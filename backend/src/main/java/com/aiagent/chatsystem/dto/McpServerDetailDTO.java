@@ -1,9 +1,12 @@
 package com.aiagent.chatsystem.dto;
 
+import java.util.Map;
+
 /**
- * Summary of an MCP server (name, url, source, connection status).
+ * Full details of an MCP server (for GET by name / edit). Includes url, source, requestTimeoutSeconds, headers.
+ * Tools are discovered from the server at runtime; no tool list or input schema is stored.
  */
-public class McpServerSummaryDTO {
+public class McpServerDetailDTO {
 
     private String name;
     private String url;
@@ -12,15 +15,8 @@ public class McpServerSummaryDTO {
     private String status;
     /** OAuth provider id when server uses OAuth (e.g. "atlassian"). */
     private String oauthProvider;
-
-    public McpServerSummaryDTO() {
-    }
-
-    public McpServerSummaryDTO(String name, String url, String source) {
-        this.name = name;
-        this.url = url;
-        this.source = source;
-    }
+    private int requestTimeoutSeconds = 30;
+    private Map<String, String> headers;
 
     public String getName() {
         return name;
@@ -60,5 +56,21 @@ public class McpServerSummaryDTO {
 
     public void setOauthProvider(String oauthProvider) {
         this.oauthProvider = oauthProvider;
+    }
+
+    public int getRequestTimeoutSeconds() {
+        return requestTimeoutSeconds;
+    }
+
+    public void setRequestTimeoutSeconds(int requestTimeoutSeconds) {
+        this.requestTimeoutSeconds = requestTimeoutSeconds;
+    }
+
+    public Map<String, String> getHeaders() {
+        return headers;
+    }
+
+    public void setHeaders(Map<String, String> headers) {
+        this.headers = headers;
     }
 }
