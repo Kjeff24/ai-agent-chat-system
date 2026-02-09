@@ -66,6 +66,6 @@ public class ModelConfig {
     }
     
     public enum ModelProvider {
-        openai, anthropic, ollama, custom
+        openai, anthropic, ollama, bedrock, custom
     }
 }
