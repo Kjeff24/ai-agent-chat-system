@@ -1,17 +1,23 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { Conversation } from '../models/conversation.model';
 import { Message } from '../models/message.model';
-import { ModelConfig, CreateModelConfigRequest } from '../models/model-config.model';
-import { RegistryResponse, RegisterModelRequest, ProviderDetailsResponse, UpdateProviderRequest } from '../models/registry.model';
-import { McpServerSummary, RegisterMcpServerRequest } from '../models/mcp.model';
+import { RegistryResponse, RegisterModelRequest, ProviderDetailsResponse, UpdateProviderRequest, DiscoverModelsRequest, DiscoverModelsResponse } from '../models/registry.model';
+import { McpServerSummary, McpServerDetail, RegisterMcpServerRequest, UpdateMcpServerRequest } from '../models/mcp.model';
+import {
+  OAuthProviderSummary,
+  OAuthProviderDetail,
+  RegisterOAuthProviderRequest,
+  UpdateOAuthProviderRequest,
+} from '../models/oauth-provider.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 
@@ -74,42 +80,20 @@ export class ApiService {
     );
   }
 
-  // Model Configs
-  getModelConfigs(): Observable<ModelConfig[]> {
-    return this.http.get<ModelConfig[]>(`${this.apiUrl}/models`, {
-      headers: this.getHeaders()
-    });
-  }
-
-  getModelConfig(id: string): Observable<ModelConfig> {
-    return this.http.get<ModelConfig>(`${this.apiUrl}/models/${id}`, {
-      headers: this.getHeaders()
-    });
-  }
-
-  createModelConfig(request: CreateModelConfigRequest): Observable<ModelConfig> {
-    return this.http.post<ModelConfig>(`${this.apiUrl}/models`, request, {
-      headers: this.getHeaders()
-    });
-  }
-
-  updateModelConfig(id: string, updates: Partial<CreateModelConfigRequest>): Observable<ModelConfig> {
-    return this.http.patch<ModelConfig>(`${this.apiUrl}/models/${id}`, updates, {
-      headers: this.getHeaders()
-    });
-  }
-
-  deleteModelConfig(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/models/${id}`, {
-      headers: this.getHeaders()
-    });
-  }
-
   // Model registry (providers)
   getRegistry(): Observable<RegistryResponse> {
     return this.http.get<RegistryResponse>(`${this.apiUrl}/models/registry`, {
       headers: this.getHeaders()
     });
+  }
+
+  /** Discover available model IDs for a provider type (openai, ollama, anthropic, bedrock). */
+  discoverModels(request: DiscoverModelsRequest): Observable<DiscoverModelsResponse> {
+    return this.http.post<DiscoverModelsResponse>(
+      `${this.apiUrl}/models/registry/discover`,
+      request,
+      { headers: this.getHeaders() }
+    );
   }
 
   /** Get provider details (for edit). For dynamic providers includes type, baseUrl, models, defaultModel, apiKeyMasked. */
@@ -149,8 +133,20 @@ export class ApiService {
     });
   }
 
+  getMcpServer(name: string): Observable<McpServerDetail> {
+    return this.http.get<McpServerDetail>(`${this.apiUrl}/mcp/servers/${encodeURIComponent(name)}`, {
+      headers: this.getHeaders()
+    });
+  }
+
   registerMcpServer(request: RegisterMcpServerRequest): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/mcp/servers`, request, {
+      headers: this.getHeaders()
+    });
+  }
+
+  updateMcpServer(name: string, request: UpdateMcpServerRequest): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/mcp/servers/${encodeURIComponent(name)}`, request, {
       headers: this.getHeaders()
     });
   }
@@ -159,5 +155,56 @@ export class ApiService {
     return this.http.delete<void>(`${this.apiUrl}/mcp/servers/${encodeURIComponent(name)}`, {
       headers: this.getHeaders()
     });
+  }
+
+  /** Get OAuth authorize URL for an MCP server. Then set window.location to the returned URL. */
+  getMcpOAuthAuthorizeUrl(name: string): Observable<{ authorizeUrl: string }> {
+    return this.http.get<{ authorizeUrl: string }>(
+      `${this.apiUrl}/mcp/servers/${encodeURIComponent(name)}/oauth/authorize-url`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /** Revoke OAuth token for an MCP server (current user). Server will show as not authorized until user authorizes again. */
+  revokeMcpOAuthToken(name: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.apiUrl}/mcp/servers/${encodeURIComponent(name)}/oauth/token`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  // MCP OAuth providers
+  getOAuthProviders(): Observable<OAuthProviderSummary[]> {
+    return this.http.get<OAuthProviderSummary[]>(`${this.apiUrl}/mcp/oauth/providers`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  getOAuthProvider(id: string): Observable<OAuthProviderDetail> {
+    return this.http.get<OAuthProviderDetail>(
+      `${this.apiUrl}/mcp/oauth/providers/${encodeURIComponent(id)}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  registerOAuthProvider(request: RegisterOAuthProviderRequest): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/mcp/oauth/providers`, request, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  updateOAuthProvider(id: string, request: UpdateOAuthProviderRequest): Observable<void> {
+    return this.http.put<void>(
+      `${this.apiUrl}/mcp/oauth/providers/${encodeURIComponent(id)}`,
+      request,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  removeOAuthProvider(id: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.apiUrl}/mcp/oauth/providers/${encodeURIComponent(id)}`,
+      { headers: this.getHeaders() }
+    );
   }
 }
