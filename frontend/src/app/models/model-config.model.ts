@@ -1,7 +1,7 @@
 export interface ModelConfig {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'ollama' | 'custom';
+  provider: 'openai' | 'anthropic' | 'ollama' | 'bedrock' | 'custom';
   model: string;
   parameters?: {
     temperature?: number;
