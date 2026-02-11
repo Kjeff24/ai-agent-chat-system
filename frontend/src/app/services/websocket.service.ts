@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Subject, Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { Message } from '../models/message.model';
 import SockJS from 'sockjs-client';
 import { Client, Message as StompMessage, StompSubscription } from '@stomp/stompjs';
@@ -16,7 +17,10 @@ export class WebSocketService {
   constructor() {}
 
   connect(): void {
-    const socket = new SockJS('http://localhost:8080/ws');
+    const wsUrl = environment.wsUrl.startsWith('http')
+      ? environment.wsUrl
+      : `${window.location.origin}${environment.wsUrl}`;
+    const socket = new SockJS(wsUrl);
     this.stompClient = new Client({
       webSocketFactory: () => socket as any,
       debug: (str) => {
