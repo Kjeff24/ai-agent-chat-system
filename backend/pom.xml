@@ -95,6 +95,12 @@
             <artifactId>spring-ai-starter-model-ollama</artifactId>
             <version>${spring-ai.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-bedrock-converse</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
         
         <!-- Database -->
         <dependency>
@@ -169,6 +175,34 @@
                         </exclude>
                     </excludes>
                 </configuration>
+            </plugin>
+            <!-- JavaDoc: mvn javadoc:javadoc -> target/site/apidocs/; mvn javadoc:jar -> target/*-javadoc.jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.7.0</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <docencoding>UTF-8</docencoding>
+                    <doclint>none</doclint>
+                    <show>protected</show>
+                    <nohelp>true</nohelp>
+                    <windowtitle>AI Agent Chat System — Backend API</windowtitle>
+                    <doctitle>AI Agent Chat System — Backend API</doctitle>
+                    <bottom><![CDATA[AI Agent Chat System — Backend. See <a href="../../README.md">README</a> and <a href="../../docs/BACKEND.md">BACKEND.md</a>.]]></bottom>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadoc</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
