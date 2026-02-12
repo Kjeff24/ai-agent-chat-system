@@ -40,19 +40,21 @@ So: **OAuth tokens are per user and per server**; MCP client creation (or reques
 - **OAuth provider config**  
   For each OAuth-enabled MCP server (e.g. “atlassian”):  
   `authorization_uri`, `token_uri`, `client_id`, `client_secret` (from env or config), `scope`.  
-  Example in `application.yml`:
+  Example in `application.yml` (Atlassian MCP — see [ATLASSIAN_MCP_SERVER.md](./ATLASSIAN_MCP_SERVER.md) for full setup):
   ```yaml
   app:
     mcp:
-      oauth-servers:
-        atlassian:
-          authorization-uri: https://auth.atlassian.com/authorize
-          token-uri: https://auth.atlassian.com/oauth/token
-          client-id: ${ATLASSIAN_MCP_CLIENT_ID}
-          client-secret: ${ATLASSIAN_MCP_CLIENT_SECRET}
-          scopes: "read:jira-work read:confluence-content.all offline_access"
+      oauth:
+        callback-uri: https://your-backend/api/mcp/servers/oauth/callback
+        providers:
+          atlassian:
+            authorization-uri: https://mcp.atlassian.com/v1/authorize
+            token-uri: https://cf.mcp.atlassian.com/v1/token
+            client-id: ${ATLASSIAN_MCP_CLIENT_ID}
+            client-secret: ${ATLASSIAN_MCP_CLIENT_SECRET}
+            scopes: "openid email profile"
   ```
-  (Use the real Atlassian OAuth URLs and scopes from their docs.)
+  Discovery: [https://mcp.atlassian.com/.well-known/oauth-authorization-server](https://mcp.atlassian.com/.well-known/oauth-authorization-server).
 
 - **Token storage**  
   New entity, e.g. `McpOAuthToken`:  
@@ -101,10 +103,10 @@ So: **OAuth tokens are per user and per server**; MCP client creation (or reques
 
 ### 2.3 Provider-specific setup (e.g. Atlassian)
 
-- Register an OAuth app in the provider’s developer console (e.g. Atlassian Developer).
+- Register an OAuth app with the provider (for Atlassian MCP, use the [OAuth discovery](https://mcp.atlassian.com/.well-known/oauth-authorization-server) and registration flow).
 - Get **client ID** and **client secret**.
 - Set **redirect URI** to your callback, e.g. `https://your-backend/api/mcp/servers/oauth/callback`.
-- Use the provider’s documented **authorization** and **token** URLs and **scopes** in your `app.mcp.oauth-servers.atlassian` config.
+- Use the provider's **authorization** and **token** URLs and **scopes** in your `app.mcp.oauth.providers.<id>` config. For step-by-step Atlassian MCP (register client, connect, get token, refresh), see **[ATLASSIAN_MCP_SERVER.md](./ATLASSIAN_MCP_SERVER.md)**.
 
 ---
 
