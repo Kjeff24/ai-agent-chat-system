@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
@@ -17,6 +17,8 @@ export class AuthComponent {
   loading = false;
   loginForm!: FormGroup;
   registerForm!: FormGroup;
+  showLoginPassword = signal(false);
+  showRegPassword = signal(false);
 
   constructor(
     private fb: FormBuilder,
