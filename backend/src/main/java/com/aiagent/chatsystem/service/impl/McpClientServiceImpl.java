@@ -1,5 +1,6 @@
 package com.aiagent.chatsystem.service.impl;
 
+import com.aiagent.chatsystem.config.AppMcpOAuthProperties;
 import com.aiagent.chatsystem.config.McpProperties;
 import com.aiagent.chatsystem.dto.McpServerDetailDTO;
 import com.aiagent.chatsystem.model.McpServer;
@@ -42,6 +43,7 @@ public class McpClientServiceImpl implements McpClientService {
     private static final Logger logger = LoggerFactory.getLogger(McpClientServiceImpl.class);
 
     private final McpProperties properties;
+    private final AppMcpOAuthProperties oauthProperties;
     private final McpOAuthService mcpOAuthService;
     private final McpServerRepository mcpServerRepository;
     private final Map<String, McpSyncClient> clients = new ConcurrentHashMap<>();
@@ -52,9 +54,10 @@ public class McpClientServiceImpl implements McpClientService {
     private final Map<String, Long> oauthFailureExpiry = new ConcurrentHashMap<>();
     private static final long OAUTH_FAILURE_CACHE_MS = 5 * 60 * 1000; // 5 minutes
 
-    public McpClientServiceImpl(McpProperties properties, McpOAuthService mcpOAuthService,
-                                McpServerRepository mcpServerRepository) {
+    public McpClientServiceImpl(McpProperties properties, AppMcpOAuthProperties oauthProperties,
+                                McpOAuthService mcpOAuthService, McpServerRepository mcpServerRepository) {
         this.properties = properties;
+        this.oauthProperties = oauthProperties;
         this.mcpOAuthService = mcpOAuthService;
         this.mcpServerRepository = mcpServerRepository;
     }
@@ -323,13 +326,6 @@ public class McpClientServiceImpl implements McpClientService {
     }
 
     @Override
-    public String getDefaultServerName() {
-        Map<String, McpProperties.McpServerConfig> all = getAllServerConfigs();
-        if (all.isEmpty()) return "";
-        return all.keySet().iterator().next();
-    }
-
-    @Override
     public String getOAuthProviderForServer(String serverName) {
         McpProperties.McpServerConfig config = getServerConfig(serverName);
         if (config == null) return null;
@@ -454,9 +450,13 @@ public class McpClientServiceImpl implements McpClientService {
                 logger.debug("OAuth MCP client for {}: setting Authorization Bearer header (token length={})", serverName, accessToken != null ? accessToken.length() : 0);
             }
             var builder = HttpClientStreamableHttpTransport.builder(config.getUrl());
+            String callbackOrigin = getCallbackOrigin();
             builder.customizeRequest(req -> {
                 req.header("Authorization", "Bearer " + accessToken);
                 req.header("Accept", "application/json, text/event-stream");
+                if (callbackOrigin != null) {
+                    req.header("Origin", callbackOrigin);
+                }
             });
             McpClientTransport transport = builder.build();
             McpSyncClient client = McpClient.sync(transport)
@@ -469,8 +469,9 @@ public class McpClientServiceImpl implements McpClientService {
             logger.warn("Failed to create MCP OAuth client for {}: {}", config.getUrl(), e.getMessage());
             String causeMsg = e.getCause() != null ? e.getCause().getMessage() : "";
             if (causeMsg != null && (causeMsg.contains("404") || causeMsg.contains("Server Not Found"))) {
-                if (config.getUrl() != null && config.getUrl().contains("mcp.atlassian.com")) {
-                    logger.info("Atlassian MCP returned 404. Ensure your domain (and IP if allowlisted) is allowed in Atlassian Administration → Rovo MCP Server settings. See https://support.atlassian.com/security-and-access-policies/docs/available-atlassian-rovo-mcp-server-domains/");
+                String origin = getCallbackOrigin();
+                if (origin != null) {
+                    logger.info("OAuth MCP returned 404. If the server allowlists by domain, add this origin to its allowed list: [{}]", origin);
                 }
             }
             if (logger.isDebugEnabled()) {
@@ -482,6 +483,17 @@ public class McpClientServiceImpl implements McpClientService {
             }
             return null;
         }
+    }
+
+    /** Origin (scheme + host + port) from OAuth callback URI; null if not configured. Used for Origin header on OAuth MCP requests. */
+    private String getCallbackOrigin() {
+        if (oauthProperties == null) return null;
+        String callbackUri = oauthProperties.getCallbackUri();
+        if (callbackUri == null || callbackUri.isBlank()) return null;
+        int afterScheme = callbackUri.indexOf("://");
+        if (afterScheme < 0) return null;
+        int pathStart = callbackUri.indexOf("/", afterScheme + 3);
+        return pathStart > 0 ? callbackUri.substring(0, pathStart) : callbackUri;
     }
 
     private static String extractTextFromContent(List<McpSchema.Content> content) {

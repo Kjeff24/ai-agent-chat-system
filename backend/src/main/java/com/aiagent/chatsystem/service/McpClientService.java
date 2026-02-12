@@ -77,11 +77,6 @@ public interface McpClientService {
     String executeTool(String serverName, String toolName, Map<String, Object> arguments, java.util.UUID userId);
 
     /**
-     * Get the first configured server name, or empty if none.
-     */
-    String getDefaultServerName();
-
-    /**
      * OAuth provider id for a server (e.g. "atlassian"), or null/empty if the server uses static headers.
      */
     String getOAuthProviderForServer(String serverName);

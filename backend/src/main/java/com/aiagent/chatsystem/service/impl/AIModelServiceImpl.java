@@ -115,10 +115,6 @@ public class AIModelServiceImpl implements AIModelService {
         return model;
     }
 
-    private ChatModel getChatModel(ModelConfig config) {
-        return getChatModelByProvider(resolveProviderKeyFromConfig(config));
-    }
-
     /** Resolve registry key: use parameters.providerKey when provider is custom, else provider enum name. */
     private String resolveProviderKeyFromConfig(ModelConfig config) {
         if (config.getProvider() == ModelConfig.ModelProvider.custom
@@ -130,18 +126,6 @@ public class AIModelServiceImpl implements AIModelService {
         return config.getProvider().name().toLowerCase();
     }
 
-    private Prompt getPromptWithOptions(List<Message> messages, ModelConfig config) {
-        Map<String, Object> params = config.getParameters();
-        Prompt prompt = new Prompt(messages);
-        
-        // Note: In Spring AI 1.0.0-M4, options are typically set via the ChatModel's default options
-        // or through the application.yml configuration. For runtime configuration changes,
-        // you may need to create new ChatModel instances with different options.
-        // For now, we'll use the default configured models.
-        
-        return prompt;
-    }
-    
     private Double getDoubleValue(Object value) {
         if (value == null) return null;
         if (value instanceof Double) return (Double) value;

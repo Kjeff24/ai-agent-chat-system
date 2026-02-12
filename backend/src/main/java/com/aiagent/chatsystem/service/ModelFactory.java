@@ -155,7 +155,7 @@ public class ModelFactory {
         if (!accessKey.isEmpty() && !secretKey.isEmpty()) {
             credentialsProvider = StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey));
         } else {
-            credentialsProvider = DefaultCredentialsProvider.create();
+            credentialsProvider = DefaultCredentialsProvider.builder().build();
         }
 
         BedrockChatOptions options = BedrockChatOptions.builder()
