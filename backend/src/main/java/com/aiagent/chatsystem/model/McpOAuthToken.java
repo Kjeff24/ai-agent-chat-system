@@ -34,6 +34,12 @@ public class McpOAuthToken {
     @Column(name = "expires_at")
     private Instant expiresAt;
 
+    @Column(name = "scope", length = 1024)
+    private String scope;
+
+    @Column(name = "provider_id", length = 255)
+    private String providerId;
+
     @Column(name = "updated_at")
     private Instant updatedAt;
 
@@ -83,6 +89,22 @@ public class McpOAuthToken {
 
     public void setExpiresAt(Instant expiresAt) {
         this.expiresAt = expiresAt;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
+    }
+
+    public String getProviderId() {
+        return providerId;
+    }
+
+    public void setProviderId(String providerId) {
+        this.providerId = providerId;
     }
 
     public Instant getUpdatedAt() {

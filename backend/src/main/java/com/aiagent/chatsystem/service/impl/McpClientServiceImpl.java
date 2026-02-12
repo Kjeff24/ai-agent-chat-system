@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.PostConstruct;
+import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -41,6 +42,24 @@ import java.util.concurrent.ConcurrentHashMap;
 public class McpClientServiceImpl implements McpClientService {
 
     private static final Logger logger = LoggerFactory.getLogger(McpClientServiceImpl.class);
+
+    /** Full initialize params for MCP handshake (required by some servers e.g. Atlassian). */
+    private static final McpSchema.ClientCapabilities MCP_CLIENT_CAPABILITIES = McpSchema.ClientCapabilities.builder().build();
+    private static final McpSchema.Implementation MCP_CLIENT_INFO = new McpSchema.Implementation("ai-agent-chat-system", "1.0");
+
+    /**
+     * Split full MCP URL into (baseUri, endpoint) so that transport's resolveUri(baseUri, endpoint) equals the config URL.
+     * The SDK uses baseUri + endpoint (default "/mcp"); if we pass the full URL as base, resolve(base, "/mcp") becomes wrong path.
+     */
+    private static String[] transportBaseAndEndpoint(String fullUrl) {
+        if (fullUrl == null || fullUrl.isBlank()) return new String[] { fullUrl, "/mcp" };
+        URI u = URI.create(fullUrl.trim());
+        String base = u.getScheme() + "://" + u.getAuthority();
+        String path = u.getPath();
+        if (path == null || path.isEmpty()) path = "/mcp";
+        if (!path.startsWith("/")) path = "/" + path;
+        return new String[] { base, path };
+    }
 
     private final McpProperties properties;
     private final AppMcpOAuthProperties oauthProperties;
@@ -121,10 +140,9 @@ public class McpClientServiceImpl implements McpClientService {
             dto.setOauthProvider(op);
             if (userId == null || !mcpOAuthService.hasToken(userId, serverName)) {
                 dto.setStatus("not_authorized");
-            } else if (isOAuthFailureCached(userId, serverName)) {
-                dto.setStatus("failed");
             } else {
-                dto.setStatus("connected");
+                String token = mcpOAuthService.getValidAccessToken(userId, serverName);
+                dto.setStatus(token != null && !token.isBlank() ? "connected" : "failed");
             }
         } else {
             dto.setStatus(serverStatus.getOrDefault(serverName, "unknown"));
@@ -133,17 +151,6 @@ public class McpClientServiceImpl implements McpClientService {
 
     private static String oauthFailureKey(UUID userId, String serverName) {
         return userId + "_" + serverName;
-    }
-
-    private boolean isOAuthFailureCached(UUID userId, String serverName) {
-        if (userId == null) return false;
-        Long expiry = oauthFailureExpiry.get(oauthFailureKey(userId, serverName));
-        if (expiry == null) return false;
-        if (System.currentTimeMillis() >= expiry) {
-            oauthFailureExpiry.remove(oauthFailureKey(userId, serverName));
-            return false;
-        }
-        return true;
     }
 
     private void recordOAuthFailure(UUID userId, String serverName) {
@@ -170,10 +177,9 @@ public class McpClientServiceImpl implements McpClientService {
             dto.setOauthProvider(op);
             if (userId == null || !mcpOAuthService.hasToken(userId, name)) {
                 dto.setStatus("not_authorized");
-            } else if (isOAuthFailureCached(userId, name)) {
-                dto.setStatus("failed");
             } else {
-                dto.setStatus("connected");
+                String token = mcpOAuthService.getValidAccessToken(userId, name);
+                dto.setStatus(token != null && !token.isBlank() ? "connected" : "failed");
             }
         } else {
             dto.setStatus(serverStatus.getOrDefault(name, "unknown"));
@@ -425,14 +431,18 @@ public class McpClientServiceImpl implements McpClientService {
 
     private McpSyncClient createClient(McpProperties.McpServerConfig config) {
         try {
-            var builder = HttpClientStreamableHttpTransport.builder(config.getUrl());
-            builder.customizeRequest(req -> req.header("Accept", "application/json, text/event-stream"));
+            String configUrl = config.getUrl();
+            String[] baseAndEndpoint = transportBaseAndEndpoint(configUrl);
+            var builder = HttpClientStreamableHttpTransport.builder(baseAndEndpoint[0]);
+            builder.endpoint(baseAndEndpoint[1]);
             if (config.getHeaders() != null && !config.getHeaders().isEmpty()) {
                 builder.customizeRequest(req -> config.getHeaders().forEach((name, value) -> req.header(name, value)));
             }
             McpClientTransport transport = builder.build();
             McpSyncClient client = McpClient.sync(transport)
                     .requestTimeout(Duration.ofSeconds(config.getRequestTimeoutSeconds()))
+                    .capabilities(MCP_CLIENT_CAPABILITIES)
+                    .clientInfo(MCP_CLIENT_INFO)
                     .build();
             client.initialize();
             logger.info("MCP client connected to {}", config.getUrl());
@@ -446,14 +456,15 @@ public class McpClientServiceImpl implements McpClientService {
     private McpSyncClient createClientWithToken(McpProperties.McpServerConfig config, String accessToken,
                                                  String serverName, UUID userId) {
         try {
-            if (logger.isDebugEnabled()) {
-                logger.debug("OAuth MCP client for {}: setting Authorization Bearer header (token length={})", serverName, accessToken != null ? accessToken.length() : 0);
-            }
-            var builder = HttpClientStreamableHttpTransport.builder(config.getUrl());
+            String configUrl = config.getUrl();
+            String[] baseAndEndpoint = transportBaseAndEndpoint(configUrl);
+            String transportBase = baseAndEndpoint[0];
+            String transportEndpoint = baseAndEndpoint[1];
+            var builder = HttpClientStreamableHttpTransport.builder(transportBase);
+            builder.endpoint(transportEndpoint);
             String callbackOrigin = getCallbackOrigin();
             builder.customizeRequest(req -> {
                 req.header("Authorization", "Bearer " + accessToken);
-                req.header("Accept", "application/json, text/event-stream");
                 if (callbackOrigin != null) {
                     req.header("Origin", callbackOrigin);
                 }
@@ -461,6 +472,8 @@ public class McpClientServiceImpl implements McpClientService {
             McpClientTransport transport = builder.build();
             McpSyncClient client = McpClient.sync(transport)
                     .requestTimeout(Duration.ofSeconds(config.getRequestTimeoutSeconds()))
+                    .capabilities(MCP_CLIENT_CAPABILITIES)
+                    .clientInfo(MCP_CLIENT_INFO)
                     .build();
             client.initialize();
             logger.debug("MCP OAuth client connected to {}", config.getUrl());
