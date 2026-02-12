@@ -78,12 +78,13 @@ app:
       # Example providers (uncomment and add under providers: above).
       # Atlassian Rovo MCP: use OAuth from https://mcp.atlassian.com/.well-known/oauth-authorization-server
       # (register your app / get client credentials from that MCP OAuth flow; add callback origin to Rovo "Your domains").
+      # Use same scope as Claude Desktop for compatibility: openid email profile
       #   atlassian:
       #     authorization-uri: https://mcp.atlassian.com/v1/authorize
       #     token-uri: https://cf.mcp.atlassian.com/v1/token
       #     client-id: ${ATLASSIAN_MCP_CLIENT_ID}
       #     client-secret: ${ATLASSIAN_MCP_CLIENT_SECRET}
-      #     scopes: "openid"
+      #     scopes: "openid email profile"
       # Classic Atlassian Developer (auth.atlassian.com) alternative:
       #     authorization-uri: https://auth.atlassian.com/authorize
       #     token-uri: https://auth.atlassian.com/oauth/token
