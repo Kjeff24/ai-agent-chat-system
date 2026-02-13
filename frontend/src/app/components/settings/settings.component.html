@@ -42,6 +42,18 @@
         <button
           type="button"
           class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+          [class.border-primary-600]="activeTab() === 'oauth'"
+          [class.text-primary-600]="activeTab() === 'oauth'"
+          [class.border-transparent]="activeTab() !== 'oauth'"
+          [class.text-gray-500]="activeTab() !== 'oauth'"
+          [class.dark:text-gray-400]="activeTab() !== 'oauth'"
+          (click)="setTab('oauth')"
+        >
+          OAuth providers
+        </button>
+        <button
+          type="button"
+          class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
           [class.border-primary-600]="activeTab() === 'mcp'"
           [class.text-primary-600]="activeTab() === 'mcp'"
           [class.border-transparent]="activeTab() !== 'mcp'"
@@ -71,6 +83,13 @@
           <app-providers-tab
             [registry]="registry()"
             [loading]="loading()"
+            (refresh)="onRefresh()"
+            (errorMessage)="onError($event)"
+          />
+        }
+        @if (activeTab() === 'oauth') {
+          <app-oauth-tab
+            [oauthProviders]="oauthProviders()"
             (refresh)="onRefresh()"
             (errorMessage)="onError($event)"
           />
