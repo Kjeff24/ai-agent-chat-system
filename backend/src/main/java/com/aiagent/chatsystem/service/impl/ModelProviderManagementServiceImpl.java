@@ -4,7 +4,9 @@ import com.aiagent.chatsystem.dto.RegisterModelRequest;
 import com.aiagent.chatsystem.dto.UpdateProviderRequest;
 import com.aiagent.chatsystem.exception.InvalidModelConfigException;
 import com.aiagent.chatsystem.exception.ModelProviderNotFoundException;
+import com.aiagent.chatsystem.model.DefaultProviderSetting;
 import com.aiagent.chatsystem.model.DynamicProviderRegistration;
+import com.aiagent.chatsystem.repository.DefaultProviderSettingRepository;
 import com.aiagent.chatsystem.repository.DynamicProviderRegistrationRepository;
 import com.aiagent.chatsystem.service.ModelFactory;
 import com.aiagent.chatsystem.service.ModelProviderManagementService;
@@ -30,13 +32,16 @@ public class ModelProviderManagementServiceImpl implements ModelProviderManageme
     private final ModelRegistry modelRegistry;
     private final ModelFactory modelFactory;
     private final DynamicProviderRegistrationRepository persistedProviderRepository;
+    private final DefaultProviderSettingRepository defaultProviderSettingRepository;
 
     public ModelProviderManagementServiceImpl(ModelRegistry modelRegistry,
                                               ModelFactory modelFactory,
-                                              DynamicProviderRegistrationRepository persistedProviderRepository) {
+                                              DynamicProviderRegistrationRepository persistedProviderRepository,
+                                              DefaultProviderSettingRepository defaultProviderSettingRepository) {
         this.modelRegistry = modelRegistry;
         this.modelFactory = modelFactory;
         this.persistedProviderRepository = persistedProviderRepository;
+        this.defaultProviderSettingRepository = defaultProviderSettingRepository;
     }
 
     @Override
@@ -59,6 +64,15 @@ public class ModelProviderManagementServiceImpl implements ModelProviderManageme
         response.put("providers", providers);
         response.put("count", providers.size());
         response.put("providersWithMeta", withMeta);
+        // Only show a default in the UI when the user has explicitly set it via "use provider"
+        String persistedDefault = defaultProviderSettingRepository.findById(DefaultProviderSetting.DEFAULT_ID)
+                .map(DefaultProviderSetting::getProviderKey)
+                .orElse(null);
+        if (persistedDefault != null && !persistedDefault.isBlank() && modelRegistry.hasModel(persistedDefault.trim().toLowerCase())) {
+            response.put("defaultProvider", persistedDefault.trim().toLowerCase());
+        } else {
+            response.put("defaultProvider", null);
+        }
         return response;
     }
 
@@ -108,6 +122,17 @@ public class ModelProviderManagementServiceImpl implements ModelProviderManageme
             persisted.setModels(models);
             persisted.setDefaultModel(defaultModel);
             persistedProviderRepository.save(persisted);
+
+            // If no default has been set yet, make this first provider the default
+            DefaultProviderSetting existingDefault = defaultProviderSettingRepository.findById(DefaultProviderSetting.DEFAULT_ID).orElse(null);
+            if (existingDefault == null || existingDefault.getProviderKey() == null || existingDefault.getProviderKey().isBlank()) {
+                DefaultProviderSetting setting = defaultProviderSettingRepository.findById(DefaultProviderSetting.DEFAULT_ID)
+                        .orElse(DefaultProviderSetting.create(provider));
+                setting.setId(DefaultProviderSetting.DEFAULT_ID);
+                setting.setProviderKey(provider);
+                defaultProviderSettingRepository.save(setting);
+                modelRegistry.setDefaultProviderKey(provider);
+            }
 
             return Map.of("provider", provider, "status", "registered", "defaultModel", defaultModel != null ? defaultModel : "");
         } catch (IllegalArgumentException e) {
@@ -169,11 +194,37 @@ public class ModelProviderManagementServiceImpl implements ModelProviderManageme
     @Override
     @Transactional
     public void unregisterProvider(String provider) {
+        String key = provider.trim().toLowerCase();
         if (!modelRegistry.unregisterModel(provider)) {
             throw new ModelProviderNotFoundException(
                     "Provider not found or not dynamic: " + provider + ". Only providers added via POST /api/models/registry can be removed.");
         }
         persistedProviderRepository.deleteByProviderKeyIgnoreCase(provider);
+        DefaultProviderSetting setting = defaultProviderSettingRepository.findById(DefaultProviderSetting.DEFAULT_ID).orElse(null);
+        if (setting != null && key.equals(setting.getProviderKey())) {
+            defaultProviderSettingRepository.delete(setting);
+            modelRegistry.setDefaultProviderKey(null);
+        }
+    }
+
+    @Override
+    public String getDefaultProviderKey() {
+        return modelRegistry.getDefaultProviderKey();
+    }
+
+    @Override
+    @Transactional
+    public void setDefaultProviderKey(String providerKey) {
+        String key = providerKey != null ? providerKey.trim().toLowerCase() : null;
+        if (key != null && !key.isBlank() && !modelRegistry.hasModel(key)) {
+            throw new ModelProviderNotFoundException("Provider not found: " + providerKey);
+        }
+        DefaultProviderSetting setting = defaultProviderSettingRepository.findById(DefaultProviderSetting.DEFAULT_ID)
+                .orElse(DefaultProviderSetting.create(null));
+        setting.setId(DefaultProviderSetting.DEFAULT_ID);
+        setting.setProviderKey(key);
+        defaultProviderSettingRepository.save(setting);
+        modelRegistry.setDefaultProviderKey(key);
     }
 
     private static String typeDefaultModel(String type) {

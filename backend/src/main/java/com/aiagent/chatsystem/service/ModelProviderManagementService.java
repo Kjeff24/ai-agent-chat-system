@@ -45,4 +45,15 @@ public interface ModelProviderManagementService {
      * @param provider provider key to remove
      */
     void unregisterProvider(String provider);
+
+    /**
+     * Get the current default provider key (used for new conversations).
+     */
+    String getDefaultProviderKey();
+
+    /**
+     * Set the default provider key. Provider must be registered. Persists across restarts.
+     * @param providerKey provider key (e.g. openrouter, ollama)
+     */
+    void setDefaultProviderKey(String providerKey);
 }

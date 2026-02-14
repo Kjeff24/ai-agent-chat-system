@@ -1,7 +1,9 @@
 package com.aiagent.chatsystem.config;
 
 import com.aiagent.chatsystem.dto.RegisterModelRequest;
+import com.aiagent.chatsystem.model.DefaultProviderSetting;
 import com.aiagent.chatsystem.model.DynamicProviderRegistration;
+import com.aiagent.chatsystem.repository.DefaultProviderSettingRepository;
 import com.aiagent.chatsystem.repository.DynamicProviderRegistrationRepository;
 import com.aiagent.chatsystem.service.ModelFactory;
 import com.aiagent.chatsystem.service.ProviderMetadata;
@@ -28,6 +30,7 @@ public class AIModelInitializer {
             ModelRegistry modelRegistry,
             ModelFactory modelFactory,
             DynamicProviderRegistrationRepository persistedProviderRepository,
+            DefaultProviderSettingRepository defaultProviderSettingRepository,
             Optional<org.springframework.ai.openai.OpenAiChatModel> openAiChatModel,
             Optional<org.springframework.ai.anthropic.AnthropicChatModel> anthropicChatModel,
             Optional<org.springframework.ai.ollama.OllamaChatModel> ollamaChatModel) {
@@ -66,6 +69,32 @@ public class AIModelInitializer {
                     System.out.println("✓ Dynamic provider restored: " + p.getProviderKey());
                 } catch (Exception e) {
                     System.err.println("⚠ Failed to restore dynamic provider " + p.getProviderKey() + ": " + e.getMessage());
+                }
+            }
+
+            defaultProviderSettingRepository.findById(DefaultProviderSetting.DEFAULT_ID).ifPresent(setting -> {
+                if (setting.getProviderKey() != null && !setting.getProviderKey().isBlank()) {
+                    modelRegistry.setDefaultProviderKey(setting.getProviderKey());
+                    System.out.println("✓ Default provider set to: " + setting.getProviderKey());
+                }
+            });
+
+            // If we have providers but no default was ever set, set the first (by creation order) as default
+            if (!persisted.isEmpty()) {
+                boolean noDefault = defaultProviderSettingRepository.findById(DefaultProviderSetting.DEFAULT_ID)
+                        .map(s -> s.getProviderKey() == null || s.getProviderKey().isBlank())
+                        .orElse(true);
+                if (noDefault) {
+                    String firstKey = persisted.get(0).getProviderKey();
+                    if (firstKey != null && !firstKey.isBlank()) {
+                        DefaultProviderSetting setting = defaultProviderSettingRepository.findById(DefaultProviderSetting.DEFAULT_ID)
+                                .orElseGet(() -> DefaultProviderSetting.create(null));
+                        setting.setId(DefaultProviderSetting.DEFAULT_ID);
+                        setting.setProviderKey(firstKey);
+                        defaultProviderSettingRepository.save(setting);
+                        modelRegistry.setDefaultProviderKey(firstKey);
+                        System.out.println("✓ First provider set as default: " + firstKey);
+                    }
                 }
             }
 

@@ -1,5 +1,6 @@
 package com.aiagent.chatsystem.controller;
 
+import com.aiagent.chatsystem.dto.DefaultProviderRequest;
 import com.aiagent.chatsystem.dto.DiscoverModelsRequest;
 import com.aiagent.chatsystem.dto.RegisterModelRequest;
 import com.aiagent.chatsystem.dto.UpdateProviderRequest;
@@ -36,10 +37,31 @@ public class ModelManagementController {
     }
 
     @GetMapping
-    @Operation(summary = "List providers", description = "Get all registered providers with dynamic flag, and when available: models list and defaultModel")
-    @ApiResponse(responseCode = "200", description = "Success. Body: { providers, count, providersWithMeta: [{ name, dynamic, models?, defaultModel? }] }")
+    @Operation(summary = "List providers", description = "Get all registered providers with dynamic flag, defaultProvider, and when available: models list and defaultModel")
+    @ApiResponse(responseCode = "200", description = "Success. Body: { providers, count, defaultProvider?, providersWithMeta: [{ name, dynamic, models?, defaultModel? }] }")
     public Map<String, Object> getRegisteredModels() {
         return modelProviderManagementService.getRegisteredProvidersSummary();
+    }
+
+    @GetMapping("/default-provider")
+    @Operation(summary = "Get default provider", description = "Returns the provider key used for new conversations (e.g. openrouter, ollama)")
+    @ApiResponse(responseCode = "200", description = "Success. Body: { providerKey }")
+    public Map<String, String> getDefaultProvider() {
+        String key = modelProviderManagementService.getDefaultProviderKey();
+        return Map.of("providerKey", key != null ? key : "");
+    }
+
+    @PutMapping("/default-provider")
+    @Operation(summary = "Set default provider", description = "Set the provider to use for new conversations. Provider must be registered.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Updated. Body: { providerKey }"),
+            @ApiResponse(responseCode = "404", description = "Provider not found")
+    })
+    public Map<String, String> setDefaultProvider(@RequestBody DefaultProviderRequest request) {
+        String key = request != null && request.getProviderKey() != null ? request.getProviderKey().trim() : null;
+        if (key != null && key.isEmpty()) key = null;
+        modelProviderManagementService.setDefaultProviderKey(key);
+        return Map.of("providerKey", key != null ? key : "");
     }
 
     @GetMapping("/{provider}")

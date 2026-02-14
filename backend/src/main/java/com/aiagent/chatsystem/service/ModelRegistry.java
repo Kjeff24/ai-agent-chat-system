@@ -19,6 +19,8 @@ public class ModelRegistry {
     private final Map<String, ChatModel> models = new ConcurrentHashMap<>();
     private final Set<String> dynamicProviders = ConcurrentHashMap.newKeySet();
     private final Map<String, ProviderMetadata> metadataByProvider = new ConcurrentHashMap<>();
+    /** Explicit default provider key (set via API). Null = use first registered provider. */
+    private volatile String defaultProviderKey;
 
     /**
      * Register a chat model (e.g. at startup). Not tracked as dynamic; no metadata.
@@ -89,9 +91,19 @@ public class ModelRegistry {
     }
 
     /**
-     * First registered provider key, or null if none. Used as default for new conversations.
+     * Set the default provider key (used for new conversations). Null clears the override.
+     */
+    public void setDefaultProviderKey(String providerKey) {
+        this.defaultProviderKey = providerKey != null && !providerKey.isBlank() ? providerKey.trim().toLowerCase() : null;
+    }
+
+    /**
+     * First registered provider key, or the explicitly set default if it is still registered. Null if none.
      */
     public String getDefaultProviderKey() {
+        if (defaultProviderKey != null && models.containsKey(defaultProviderKey)) {
+            return defaultProviderKey;
+        }
         return models.isEmpty() ? null : models.keySet().iterator().next();
     }
 
