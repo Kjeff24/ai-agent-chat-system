@@ -9,12 +9,14 @@ import com.aiagent.chatsystem.exception.ConversationAccessDeniedException;
 import com.aiagent.chatsystem.exception.ConversationNotFoundException;
 import com.aiagent.chatsystem.exception.ModelConfigNotFoundException;
 import com.aiagent.chatsystem.exception.NoDefaultProviderException;
+import com.aiagent.chatsystem.exception.UserNotFoundException;
 import com.aiagent.chatsystem.model.Conversation;
 import com.aiagent.chatsystem.model.Message;
 import com.aiagent.chatsystem.model.ModelConfig;
 import com.aiagent.chatsystem.repository.ConversationRepository;
 import com.aiagent.chatsystem.repository.MessageRepository;
 import com.aiagent.chatsystem.repository.ModelConfigRepository;
+import com.aiagent.chatsystem.repository.UserRepository;
 import com.aiagent.chatsystem.service.AIModelService;
 import com.aiagent.chatsystem.service.ConversationService;
 import com.aiagent.chatsystem.service.McpClientService;
@@ -42,6 +44,7 @@ public class ConversationServiceImpl implements ConversationService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final ModelConfigRepository modelConfigRepository;
+    private final UserRepository userRepository;
     private final ModelRegistry modelRegistry;
     private final AIModelService aiModelService;
     private final McpClientService mcpClientService;
@@ -52,6 +55,7 @@ public class ConversationServiceImpl implements ConversationService {
             ConversationRepository conversationRepository,
             MessageRepository messageRepository,
             ModelConfigRepository modelConfigRepository,
+            UserRepository userRepository,
             ModelRegistry modelRegistry,
             AIModelService aiModelService,
             McpClientService mcpClientService,
@@ -60,6 +64,7 @@ public class ConversationServiceImpl implements ConversationService {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.modelConfigRepository = modelConfigRepository;
+        this.userRepository = userRepository;
         this.modelRegistry = modelRegistry;
         this.aiModelService = aiModelService;
         this.mcpClientService = mcpClientService;
@@ -84,6 +89,9 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     @Transactional
     public ConversationDTO createConversation(CreateConversationRequest request, UUID userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotFoundException("User not found; please log in again.");
+        }
         String providerKey;
         String model;
         if (request != null && request.getProviderKey() != null && !request.getProviderKey().isBlank()) {
