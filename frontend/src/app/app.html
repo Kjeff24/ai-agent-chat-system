@@ -115,10 +115,10 @@
     [open]="showSettings"
     (closeModal)="closeSettings()"
   ></app-settings>
-
-  <!-- Custom toasts and confirm dialog (no browser alert/confirm) -->
-  <app-toast></app-toast>
-  <app-confirm-dialog></app-confirm-dialog>
 } @else {
   <app-auth></app-auth>
 }
+
+<!-- Toasts and confirm dialog always in DOM so they show after redirect (e.g. 401 logout) -->
+<app-toast></app-toast>
+<app-confirm-dialog></app-confirm-dialog>
