@@ -34,6 +34,8 @@ export interface UpdateProviderRequest {
 export interface RegistryResponse {
   providers: string[];
   count: number;
+  /** Current default provider key (used for new conversations). */
+  defaultProvider?: string | null;
   providersWithMeta: ProviderWithMeta[];
 }
 

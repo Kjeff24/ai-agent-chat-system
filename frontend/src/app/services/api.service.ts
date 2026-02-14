@@ -126,6 +126,15 @@ export class ApiService {
     });
   }
 
+  /** Set the default provider (used for new conversations). */
+  setDefaultProvider(providerKey: string): Observable<{ providerKey: string }> {
+    return this.http.put<{ providerKey: string }>(
+      `${this.apiUrl}/models/registry/default-provider`,
+      { providerKey: providerKey || null },
+      { headers: this.getHeaders() }
+    );
+  }
+
   // MCP servers
   getMcpServers(): Observable<McpServerSummary[]> {
     return this.http.get<McpServerSummary[]>(`${this.apiUrl}/mcp/servers`, {
