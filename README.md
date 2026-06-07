@@ -2,6 +2,36 @@
 
 A scalable, extensible chat system with configurable AI models, real-time communication, and multi-client platform support.
 
+## Screenshots
+
+**Chat interface**
+
+![Chat empty state](frontend/src/assets/images/chat-empty-state.png)
+
+**Settings — Model providers**
+
+![Settings model providers](frontend/src/assets/images/settings-model-providers.png)
+
+**Register model provider**
+
+![Register model provider](frontend/src/assets/images/register-model-provider.png)
+
+**Settings — OAuth providers**
+
+![Settings OAuth providers](frontend/src/assets/images/settings-oauth-providers.png)
+
+**Add OAuth provider**
+
+![Add OAuth provider](frontend/src/assets/images/add-oauth-provider.png)
+
+**Settings — MCP servers**
+
+![Settings MCP servers](frontend/src/assets/images/settings-mcp-servers.png)
+
+**Register MCP server**
+
+![Register MCP server](frontend/src/assets/images/register-mcp-server.png)
+
 ## Tech Stack
 
 ### Backend
