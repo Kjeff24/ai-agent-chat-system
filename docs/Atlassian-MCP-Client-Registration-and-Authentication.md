@@ -430,7 +430,6 @@ Tokens expire. Refresh them when the access token is expired and a refresh token
 |------|--------|
 | Discovery | [https://mcp.atlassian.com/.well-known/oauth-authorization-server](https://mcp.atlassian.com/.well-known/oauth-authorization-server) |
 | Register | Redirect URI = frontend callback; add domain; get client_id (no client secret) |
-| Configure | `app.mcp.oauth.providers.atlassian` and `mcp.servers.atlassian` |
 | Connect | User hits authorize → callback → code exchange → tokens stored |
 | Use | MCP client uses `Authorization: Bearer <access_token>` |
 | Refresh | POST to token endpoint with `grant_type=refresh_token` when expired |
